@@ -806,6 +806,54 @@
       </div>
     </div>
 
+    <!-- Detailed Player Profile Modal -->
+    <div id="modal-player-profile" class="modal-overlay hidden">
+      <div class="modal-content glass-card profile-modal-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-icon">👤</span>
+            <h3>Player Profile</h3>
+          </div>
+          <button class="btn-close-modal" id="btn-close-profile-modal">&times;</button>
+        </div>
+        
+        <div class="modal-body profile-body">
+          <div class="profile-hero">
+            <div class="profile-avatar-circle">
+              <span id="profile-avatar-icon">👑</span>
+            </div>
+            <h2 id="profile-display-username" class="glow-text">Username</h2>
+            <span class="profile-badge-chip">🏆 <span id="profile-display-trophies">100</span> Trophies</span>
+          </div>
+
+          <div class="profile-stats-grid">
+            <div class="prof-stat-card">
+              <span class="prof-val" id="profile-stat-matches">0</span>
+              <span class="prof-lbl">Matches</span>
+            </div>
+            <div class="prof-stat-card">
+              <span class="prof-val" id="profile-stat-wins">0</span>
+              <span class="prof-lbl">Wins</span>
+            </div>
+            <div class="prof-stat-card">
+              <span class="prof-val" id="profile-stat-losses">0</span>
+              <span class="prof-lbl">Losses</span>
+            </div>
+            <div class="prof-stat-card">
+              <span class="prof-val" id="profile-stat-winrate">0%</span>
+              <span class="prof-lbl">Win Rate</span>
+            </div>
+          </div>
+
+          <div class="profile-actions">
+            <button id="btn-profile-logout" class="app-btn btn-primary danger-btn btn-full" style="margin-top: 15px;">
+              🚪 Logout Account
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- iOS Home Bar Indicator -->
     <div class="ios-home-indicator"></div>
   </div>

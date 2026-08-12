@@ -191,10 +191,41 @@ export class AuthManager {
     return true;
   }
 
-  initUI() {
+  openProfileModal(statsManager) {
+    const profileModal = document.getElementById('modal-player-profile');
+    if (!profileModal || !this.currentUser) return;
+
+    const displayUsername = document.getElementById('profile-display-username');
+    const displayTrophies = document.getElementById('profile-display-trophies');
+    const statMatches = document.getElementById('profile-stat-matches');
+    const statWins = document.getElementById('profile-stat-wins');
+    const statLosses = document.getElementById('profile-stat-losses');
+    const statWinrate = document.getElementById('profile-stat-winrate');
+
+    if (displayUsername) displayUsername.textContent = this.currentUser.username;
+    if (displayTrophies) displayTrophies.textContent = this.currentUser.trophies || 100;
+
+    const wins = this.currentUser.wins || (statsManager ? statsManager.data.victories : 0);
+    const losses = this.currentUser.losses || (statsManager ? (statsManager.data.totalGames - statsManager.data.victories) : 0);
+    const total = wins + losses;
+    const winrate = total > 0 ? Math.round((wins / total) * 100) : 0;
+
+    if (statMatches) statMatches.textContent = total;
+    if (statWins) statWins.textContent = wins;
+    if (statLosses) statLosses.textContent = Math.max(0, losses);
+    if (statWinrate) statWinrate.textContent = `${winrate}%`;
+
+    profileModal.classList.remove('hidden');
+  }
+
+  initUI(statsManager) {
     const authBtn = document.getElementById('btn-user-auth');
     const authModal = document.getElementById('modal-auth');
     const closeBtn = document.getElementById('btn-close-auth-modal');
+    const profileModal = document.getElementById('modal-player-profile');
+    const closeProfileBtn = document.getElementById('btn-close-profile-modal');
+    const logoutBtn = document.getElementById('btn-profile-logout');
+
     const form = document.getElementById('form-auth');
     const tabLogin = document.getElementById('tab-auth-login');
     const tabRegister = document.getElementById('tab-auth-register');
@@ -205,14 +236,12 @@ export class AuthManager {
 
     this.updateHeaderProfileUI();
 
-    if (authBtn && authModal) {
+    if (authBtn) {
       authBtn.addEventListener('click', () => {
         if (this.isLoggedIn()) {
-          if (confirm(`Logged in as "${this.currentUser.username}" (🏆 ${this.currentUser.trophies || 100} Trophies)\n\nDo you want to log out?`)) {
-            this.logout();
-          }
+          this.openProfileModal(statsManager);
         } else {
-          authModal.classList.remove('hidden');
+          authModal?.classList.remove('hidden');
         }
       });
     }
@@ -220,6 +249,21 @@ export class AuthManager {
     if (closeBtn && authModal) {
       closeBtn.addEventListener('click', () => {
         authModal.classList.add('hidden');
+      });
+    }
+
+    if (closeProfileBtn && profileModal) {
+      closeProfileBtn.addEventListener('click', () => {
+        profileModal.classList.add('hidden');
+      });
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to log out of your account?')) {
+          this.logout();
+          profileModal?.classList.add('hidden');
+        }
       });
     }
 

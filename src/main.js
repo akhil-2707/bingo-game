@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   createIcons({ icons });
 
   // Initialize Auth UI & Socket integration
-  authManager.initUI();
+  authManager.initUI(statsManager);
   if (multiplayerManager.socket) {
     authManager.setSocket(multiplayerManager.socket);
   }
@@ -709,10 +709,13 @@ document.addEventListener('DOMContentLoaded', () => {
       // Show Room Lobby Modal Popup
       if (modalRoomLobby) modalRoomLobby.classList.remove('hidden');
 
-      // Leader vs Guest Start Control
-      if (multiplayerManager.isHost) {
+      // Leader vs Guest Start Control: Strictly check if current socket is room host
+      const meInRoom = players.find(p => p.socketId === multiplayerManager.socket?.id);
+      const isActualLeader = meInRoom ? !!meInRoom.isHost : multiplayerManager.isHost;
+
+      if (isActualLeader) {
         if (players.length >= 2) {
-          // Friend HAS joined! Unlock Start Game button for Leader
+          // Friend HAS joined! Unlock Start Game button for Leader ONLY
           if (hostRoomControls) hostRoomControls.classList.remove('hidden');
           if (modalHostActions) modalHostActions.classList.remove('hidden');
           if (modalGuestWaiting) modalGuestWaiting.classList.add('hidden');
@@ -726,7 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       } else {
-        // Guest waiting for Leader to click Start
+        // Guest waiting for Leader to click Start - NEVER show Start button to guests!
         if (hostRoomControls) hostRoomControls.classList.add('hidden');
         if (modalHostActions) modalHostActions.classList.add('hidden');
         if (modalGuestWaiting) {

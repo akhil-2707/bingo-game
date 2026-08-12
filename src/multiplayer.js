@@ -56,6 +56,10 @@ export class MultiplayerManager {
       this.socket.on('player_joined', ({ room, playerName }) => {
         if (room && room.players) {
           this.players = room.players;
+          const me = this.players.find(p => p.socketId === this.socket.id);
+          if (me) {
+            this.isHost = !!me.isHost;
+          }
           this.onPlayerListChange(this.players);
         }
         if (playerName && playerName !== this.myPlayerName) {

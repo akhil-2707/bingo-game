@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>BINGO Master - Ultimate Mobile Bingo Experience</title>
+  <meta name="description" content="Experience the ultimate mobile Bingo game with 5x5 Grid Battle, 75-Ball Caller, 90-Ball Housie, custom word cards, voice calling, and neon visual effects.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <!-- Cinematic Game Intro Overlay -->
+  <div id="game-intro-overlay" class="game-intro-overlay">
+    <button id="btn-skip-intro" class="btn-skip-intro">Skip ⏭️</button>
+    
+    <div class="intro-stage">
+      <!-- Plasma Tractor Beams (Robot to Letters) -->
+      <div id="tractor-beams-container" class="tractor-beams-container hidden">
+        <div class="tractor-beam beam-b"></div>
+        <div class="tractor-beam beam-i"></div>
+        <div class="tractor-beam beam-n"></div>
+        <div class="tractor-beam beam-g"></div>
+        <div class="tractor-beam beam-o"></div>
+      </div>
+
+      <!-- Scattered 3D Holographic B-I-N-G-O Letters -->
+      <div id="intro-letters-container" class="intro-letters-container scattered">
+        <div class="intro-letter letter-b"><span class="letter-text">B</span><span class="letter-glow-ring"></span></div>
+        <div class="intro-letter letter-i"><span class="letter-text">I</span><span class="letter-glow-ring"></span></div>
+        <div class="intro-letter letter-n"><span class="letter-text">N</span><span class="letter-glow-ring"></span></div>
+        <div class="intro-letter letter-g"><span class="letter-text">G</span><span class="letter-glow-ring"></span></div>
+        <div class="intro-letter letter-o"><span class="letter-text">O</span><span class="letter-glow-ring"></span></div>
+      </div>
+
+      <!-- Cute Robotic Character Mascot -->
+      <div id="intro-mascot" class="intro-mascot hidden">
+        <div class="mascot-robot">
+          <span class="robot-avatar">🤖</span>
+          <div class="robot-beam-glow hidden" id="robot-beam">⚡ 🧲 ⚡</div>
+        </div>
+      </div>
+
+      <!-- Ticking Bomb / Sparkle Glow -->
+      <div id="intro-bomb-flash" class="intro-bomb-flash hidden"></div>
+    </div>
+  </div>
+
+  <!-- App Background Glow Effects -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+  <div class="bg-glow bg-glow-3"></div>
+
+  <!-- Mobile Viewport Frame Container -->
+  <div id="app-root" class="app-root mobile-shell">
+
+    <!-- Mobile Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="app-logo">
+          <span class="logo-icon">🎲</span>
+          <div class="logo-text">
+            <span class="brand-title">BINGO</span>
+            <span class="brand-subtitle">MASTER MOBILE</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <button id="btn-online-room" class="icon-btn glow-accent" title="Online Multiplayer Rooms">
+          <i data-lucide="globe"></i>
+        </button>
+        <button id="btn-sound-toggle" class="icon-btn" title="Toggle Sound & Speech">
+          <i data-lucide="volume-2" id="icon-sound"></i>
+        </button>
+        <button id="btn-stats" class="icon-btn" title="Statistics & Victories">
+          <i data-lucide="trophy"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- View Content Area -->
+    <main class="view-container">
+
+      <!-- ========================================== -->
+      <!-- MAIN HUB: GAME MODE SELECTION LANDING PAGE -->
+      <!-- ========================================== -->
+      <section id="view-main-hub" class="view-panel active">
+        <!-- Hero Header -->
+        <div class="hub-welcome-banner glass-card">
+          <div class="hub-hero-badge">🎰 BINGO MASTER HUB</div>
+          <h1 class="hub-hero-title glow-text">SELECT YOUR BINGO MODE</h1>
+          <p class="hub-hero-subtitle">Tap any mode below to start playing!</p>
+        </div>
+
+        <!-- Mode Cards Showcase Grid -->
+        <div class="hub-modes-grid">
+
+          <!-- Mode Card 1: 5x5 Grid Battle -->
+          <div class="hub-mode-card glass-card" data-launch-tab="grid-battle">
+            <div class="mode-card-banner">
+              <img src="/assets/grid_battle_3d_banner.png" alt="5x5 Grid Battle" class="mode-card-img" />
+              <span class="mode-card-chip cyan">⚔️ 1v1 CYBER ARENA</span>
+            </div>
+            <div class="mode-card-body">
+              <h3 class="mode-card-title">5x5 Clash of Bingo</h3>
+              <p class="mode-card-desc">Strict turn-based 1v1 grid battle vs AI or friends with cell daubing!</p>
+              <button class="app-btn btn-primary btn-full pulse-glow">
+                PLAY BATTLE ⚔️
+              </button>
+            </div>
+          </div>
+
+          <!-- Mode Card 2: 75-Ball Party Bingo -->
+          <div class="hub-mode-card glass-card" data-launch-tab="caller-75">
+            <div class="mode-card-banner">
+              <img src="/assets/bingo_75_hopper_banner.png" alt="75-Ball Party Bingo" class="mode-card-img" />
+              <span class="mode-card-chip gold">🎰 LIVE 3D HOPPER</span>
+            </div>
+            <div class="mode-card-body">
+              <h3 class="mode-card-title">75-Ball Party Bingo</h3>
+              <p class="mode-card-desc">Draw random numbers, play 1-4 cards, 7 target patterns & auto-daub!</p>
+              <button class="app-btn btn-gold btn-full pulse-glow">
+                PLAY 75-BALL 🎰
+              </button>
+            </div>
+          </div>
+
+          <!-- Mode Card 3: Custom Word Bingo -->
+          <div class="hub-mode-card glass-card" data-launch-tab="custom-builder">
+            <div class="mode-card-banner">
+              <img src="/assets/custom_builder_3d_banner.png" alt="Custom Word Bingo" class="mode-card-img" />
+              <span class="mode-card-chip purple">🎨 CREATOR STUDIO</span>
+            </div>
+            <div class="mode-card-body">
+              <h3 class="mode-card-title">Custom Word Bingo</h3>
+              <p class="mode-card-desc">Create custom phrase bingo cards for parties, office zoom, & movies!</p>
+              <button class="app-btn btn-secondary btn-full">
+                CREATE BINGO 🎨
+              </button>
+            </div>
+          </div>
+
+          <!-- Mode Card 4: Friends Online Arcade -->
+          <div class="hub-mode-card glass-card" data-launch-tab="online-room">
+            <div class="mode-card-banner">
+              <img src="/assets/friends_multiplayer_3d_banner.png" alt="Play with Friends" class="mode-card-img" />
+              <span class="mode-card-chip pink">👥 MULTIPLAYER LOUNGE</span>
+            </div>
+            <div class="mode-card-body">
+              <h3 class="mode-card-title">Play with Friends</h3>
+              <p class="mode-card-desc">Host or join private room keys to play 5x5 Grid Battle or 75-Ball with friends!</p>
+              <button class="app-btn btn-secondary btn-full">
+                ENTER ROOM 👥
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 1: 5x5 GRID BATTLE (Classic 1-25 Grid) -->
+      <!-- ========================================== -->
+      <section id="view-grid-battle" class="view-panel">
+        
+        <!-- Exit Game / Back to Hub Header -->
+        <div class="mode-exit-bar glass-card">
+          <button class="btn-back-hub app-btn btn-secondary btn-small">
+            <i data-lucide="arrow-left"></i> Exit Game
+          </button>
+          <span class="exit-bar-title">5x5 Clash of Bingo</span>
+        </div>
+
+        <!-- 3D Cyber Battle Arena Graphic Banner -->
+        <div class="caller-hero-banner glass-card">
+          <img src="/assets/grid_battle_3d_banner.png" alt="5x5 Cyber Battle" class="hopper-banner-img" />
+          <div class="banner-overlay-content">
+            <span class="banner-chip">⚔️ CYBER BATTLE ARENA</span>
+            <h2 class="banner-title glow-text">5x5 CLASH OF BINGO</h2>
+          </div>
+        </div>
+
+        <!-- Battle Top Status Bar -->
+        <div class="battle-hud glass-card">
+          <div class="player-info player-1 active-turn" id="hud-player">
+            <div class="avatar">👤</div>
+            <div class="details">
+              <span class="name">Player 1</span>
+              <span class="status-badge" id="p1-status">Your Turn</span>
+            </div>
+          </div>
+
+          <div class="vs-badge">VS</div>
+
+          <div class="player-info player-2" id="hud-opponent">
+            <div class="avatar" id="opp-avatar">🤖</div>
+            <div class="details">
+              <span class="name" id="opp-name">Bingo Bot</span>
+              <span class="status-badge" id="opp-status">Waiting</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- B-I-N-G-O Progress Badge Header -->
+        <div class="bingo-progress-wrapper glass-card">
+          <div class="progress-title">Line Completion</div>
+          <div class="bingo-letters-container">
+            <div class="bingo-letter-badge" data-letter="B">B</div>
+            <div class="bingo-letter-badge" data-letter="I">I</div>
+            <div class="bingo-letter-badge" data-letter="N">N</div>
+            <div class="bingo-letter-badge" data-letter="G">G</div>
+            <div class="bingo-letter-badge" data-letter="O">O</div>
+          </div>
+        </div>
+
+        <!-- Battle Sub-Mode Segmented Switcher -->
+        <div class="battle-submode-toggle">
+          <button id="btn-mode-classic" class="submode-btn active">🏆 Classic Bingo</button>
+          <button id="btn-mode-booster" class="submode-btn">⚡ Booster Mode</button>
+        </div>
+
+        <!-- Bingo Power-Ups & Boosters Bar (Only visible in Booster Mode) -->
+        <div id="powerups-bar-container" class="powerups-bar glass-card hidden">
+          <span class="powerup-title">⚡ Boosters:</span>
+          <div class="powerup-btns">
+            <button id="btn-powerup-magic" class="btn-powerup" title="Magic Strike (1/1 use per game)">
+              ⚡ Magic <span class="booster-count" id="count-powerup-magic">1</span>
+            </button>
+            <button id="btn-powerup-freeze" class="btn-powerup" title="Freeze Opponent (1/1 use per game)">
+              ❄️ Freeze <span class="booster-count" id="count-powerup-freeze">1</span>
+            </button>
+            <button id="btn-powerup-bomb" class="btn-powerup" title="Center Bomb (1/1 use per game)">
+              💣 Center <span class="booster-count" id="count-powerup-bomb">1</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode Controls Bar (Icon-Only Buttons) -->
+        <div class="grid-controls-bar">
+          <select id="select-opponent" class="app-select">
+            <option value="ai-medium" selected>🤖 AI (Medium)</option>
+            <option value="ai-easy">🤖 AI (Easy)</option>
+            <option value="ai-master">🤖 AI (Master)</option>
+            <option value="pass-play">👥 Pass & Play</option>
+          </select>
+
+          <div class="btn-group">
+            <button id="btn-switch-board" class="icon-btn-square btn-secondary hidden" title="Toggle P1/P2 View">
+              <i data-lucide="eye"></i>
+            </button>
+            <button id="btn-manual-fill" class="icon-btn-square btn-secondary" title="Manual Custom Fill (Tap or Slide 1-25)">
+              <i data-lucide="edit-3"></i>
+            </button>
+            <button id="btn-shuffle-grid" class="icon-btn-square btn-secondary" title="Shuffle Board">
+              <i data-lucide="shuffle"></i>
+            </button>
+            <button id="btn-reset-battle" class="icon-btn-square btn-primary" title="Start New Game">
+              <i data-lucide="rotate-ccw"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 5x5 Play Board Grid -->
+        <div class="grid-board-wrapper">
+          <div id="battle-grid" class="bingo-grid grid-5x5">
+            <!-- Grid cells generated dynamically -->
+          </div>
+        </div>
+
+        <!-- Call History / Called Number Bar -->
+        <div class="last-called-banner glass-card">
+          <span class="banner-label">Last Called Number:</span>
+          <span id="last-called-num" class="called-number-highlight">-</span>
+        </div>
+      </section>
+
+
+      <!-- ========================================== -->
+      <!-- TAB 2: 75-BALL CALLER & CARDS              -->
+      <!-- ========================================== -->
+      <section id="view-caller-75" class="view-panel">
+        
+        <!-- Exit Game / Back to Hub Header -->
+        <div class="mode-exit-bar glass-card">
+          <button class="btn-back-hub app-btn btn-secondary btn-small">
+            <i data-lucide="arrow-left"></i> Exit Game
+          </button>
+          <span class="exit-bar-title">75-Ball Party Bingo</span>
+        </div>
+
+        <!-- 3D Glass Hopper Hero Banner Graphic -->
+        <div class="caller-hero-banner glass-card">
+          <img src="/assets/bingo_75_hopper_banner.png" alt="3D Bingo Hopper" class="hopper-banner-img" />
+          <div class="banner-overlay-content">
+            <span class="banner-chip">🎰 LIVE 75-BALL HOPPER</span>
+            <h2 class="banner-title glow-text">3D PARTY BINGO</h2>
+          </div>
+        </div>
+
+        <!-- Live Ball Hopper & Caller Widget -->
+        <div class="caller-widget glass-card">
+          <div class="hopper-stage">
+            <div id="caller-ball-display" class="current-ball-sphere">
+              <span class="ball-letter">READY</span>
+              <span class="ball-number">--</span>
+            </div>
+            <div class="ball-shadow"></div>
+          </div>
+
+          <div class="caller-details">
+            <div class="caller-stats">
+              <div class="stat-item">
+                <span class="stat-label">Calls</span>
+                <span class="stat-value" id="c75-call-count">0/75</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Pattern</span>
+                <span class="stat-value" id="c75-pattern-name">Any Line</span>
+              </div>
+            </div>
+
+            <div class="caller-controls">
+              <button id="btn-c75-draw" class="app-btn btn-accent btn-large">
+                <i data-lucide="play"></i> Draw Ball
+              </button>
+              <button id="btn-c75-auto" class="app-btn btn-secondary">
+                <i data-lucide="fast-forward"></i> Auto Call
+              </button>
+              <button id="btn-c75-restart" class="app-btn btn-icon-only">
+                <i data-lucide="rotate-ccw"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calling Board Preview Toggle / Recent Balls -->
+        <div class="recent-balls-strip glass-card">
+          <span class="strip-label">Recent Balls:</span>
+          <div id="c75-recent-balls" class="recent-balls-list">
+            <span class="placeholder-text">Draw balls to start playing</span>
+          </div>
+          <button id="btn-c75-board-toggle" class="btn-text">Board <i data-lucide="grid-3x3"></i></button>
+        </div>
+
+        <!-- Caller Settings & Pattern Bar -->
+        <div class="caller-settings-bar glass-card">
+          <div class="setting-item">
+            <label for="select-c75-pattern">Target Pattern:</label>
+            <select id="select-c75-pattern" class="app-select">
+              <option value="any-line" selected>Any 1 Line</option>
+              <option value="double-line">Double Line (2 Lines)</option>
+              <option value="four-corners">Four Corners</option>
+              <option value="x-pattern">X - Pattern</option>
+              <option value="postage-stamp">Postage Stamp (2x2)</option>
+              <option value="outer-frame">Outer Frame</option>
+              <option value="full-house">Blackout / Full House</option>
+            </select>
+          </div>
+
+          <div class="setting-item">
+            <label for="select-c75-cards">Cards:</label>
+            <select id="select-c75-cards" class="app-select">
+              <option value="1" selected>1 Card</option>
+              <option value="2">2 Cards</option>
+              <option value="4">4 Cards</option>
+            </select>
+          </div>
+
+          <div class="setting-item">
+            <label for="select-c75-speed">Speed:</label>
+            <select id="select-c75-speed" class="app-select">
+              <option value="5000">Slow (5s)</option>
+              <option value="3500" selected>Normal (3.5s)</option>
+              <option value="2000">Fast (2s)</option>
+              <option value="1000">Turbo (1s)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="caller-settings-bar">
+          <div class="setting-item">
+            <label>Dauber Style:</label>
+            <div class="dauber-selector">
+              <button class="dauber-option active" data-dauber="neon-purple" style="--d-color: #a855f7;"></button>
+              <button class="dauber-option" data-dauber="neon-cyan" style="--d-color: #06b6d4;"></button>
+              <button class="dauber-option" data-dauber="neon-pink" style="--d-color: #ec4899;"></button>
+              <button class="dauber-option" data-dauber="neon-amber" style="--d-color: #f59e0b;"></button>
+              <button class="dauber-option" data-dauber="neon-emerald" style="--d-color: #10b981;"></button>
+            </div>
+          </div>
+          
+          <div class="setting-item">
+            <label>Auto-Daub:</label>
+            <label class="switch">
+              <input type="checkbox" id="chk-auto-daub">
+              <span class="slider round"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Bingo Card(s) Stage -->
+        <div class="card-stage-controls">
+          <span class="stage-title" id="stage-cards-title">Your Bingo Card</span>
+          <button id="btn-c75-new-card" class="btn-small">New Cards</button>
+          <button id="btn-c75-claim-bingo" class="app-btn btn-gold glow-pulse">
+            <i data-lucide="crown"></i> CLAIM BINGO!
+          </button>
+        </div>
+
+        <div id="caller-cards-wrapper" class="caller-cards-wrapper single-card">
+          <!-- Bingo cards generated dynamically -->
+        </div>
+
+        <!-- Full Board Modal Drawer -->
+        <div id="modal-c75-board" class="app-modal hidden">
+          <div class="modal-content glass-card">
+            <div class="modal-header">
+              <h3>75-Ball Master Board</h3>
+              <button class="close-modal"><i data-lucide="x"></i></button>
+            </div>
+            <div id="c75-master-grid" class="master-board-grid">
+              <!-- Numbers 1 to 75 -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ========================================== -->
+      <!-- TAB 4: CUSTOM BINGO BUILDER                -->
+      <!-- ========================================== -->
+      <section id="view-custom-builder" class="view-panel">
+        
+        <!-- Exit Game / Back to Hub Header -->
+        <div class="mode-exit-bar glass-card">
+          <button class="btn-back-hub app-btn btn-secondary btn-small">
+            <i data-lucide="arrow-left"></i> Exit Game
+          </button>
+          <span class="exit-bar-title">Custom Word Bingo</span>
+        </div>
+
+        <!-- 3D Custom Builder Graphic Banner -->
+        <div class="caller-hero-banner glass-card">
+          <img src="/assets/custom_builder_3d_banner.png" alt="3D Custom Builder" class="hopper-banner-img" />
+          <div class="banner-overlay-content">
+            <span class="banner-chip">🎨 BINGO CREATOR STUDIO</span>
+            <h2 class="banner-title glow-text">CUSTOM WORD BINGO</h2>
+          </div>
+        </div>
+
+        <div class="custom-builder-container glass-card">
+          <div class="builder-header">
+            <h3><i data-lucide="sparkles"></i> Custom Word Bingo Builder</h3>
+            <p>Create custom phrase bingo cards for parties, meetings, or custom games!</p>
+          </div>
+
+          <div class="form-group">
+            <label for="custom-card-title">Card Title:</label>
+            <input type="text" id="custom-card-title" class="app-input" value="Party Bingo" placeholder="e.g. Office Meeting Bingo">
+          </div>
+
+          <div class="preset-buttons">
+            <span class="preset-label">Quick Presets:</span>
+            <button class="btn-preset" data-preset="party">Party & Fun</button>
+            <button class="btn-preset" data-preset="office">Office / Zoom</button>
+            <button class="btn-preset" data-preset="roadtrip">Road Trip</button>
+            <button class="btn-preset" data-preset="movie">Movie Night</button>
+            <button class="btn-preset" data-preset="birthday">Birthday</button>
+            <button class="btn-preset" data-preset="gamer">Gamer Bingo</button>
+          </div>
+
+          <div class="form-group">
+            <label for="custom-words-input">Words / Phrases (Separated by line or comma, min 24):</label>
+            <textarea id="custom-words-input" class="app-textarea" rows="7" placeholder="Enter custom words..."></textarea>
+            <span class="word-counter" id="custom-word-count">0 words added</span>
+          </div>
+
+          <div class="builder-actions">
+            <button id="btn-generate-custom" class="app-btn btn-primary btn-large">
+              <i data-lucide="play-square"></i> Play Custom Card
+            </button>
+            <button id="btn-save-custom" class="app-btn btn-secondary">
+              <i data-lucide="save"></i> Save Set
+            </button>
+            <button id="btn-print-custom" class="app-btn btn-secondary">
+              <i data-lucide="printer"></i> Print Card
+            </button>
+          </div>
+        </div>
+
+        <!-- Custom Card Play Canvas -->
+        <div id="custom-card-play-area" class="custom-card-play hidden">
+          <div class="custom-card-header glass-card">
+            <h2 id="display-custom-title">Custom Bingo</h2>
+            <button id="btn-back-builder" class="btn-small"><i data-lucide="arrow-left"></i> Edit Words</button>
+          </div>
+          <div id="custom-bingo-grid" class="bingo-grid grid-5x5">
+            <!-- Custom word cards -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 3: ONLINE MULTIPLAYER (Play with Friends) -->
+      <!-- ========================================== -->
+      <section id="view-online-room" class="view-panel">
+        
+        <!-- Exit Game / Back to Hub Header -->
+        <div class="mode-exit-bar glass-card">
+          <button class="btn-back-hub app-btn btn-secondary btn-small">
+            <i data-lucide="arrow-left"></i> Exit Game
+          </button>
+          <span class="exit-bar-title">Play with Friends</span>
+        </div>
+
+        <!-- 3D Friends Multiplayer Graphic Banner -->
+        <div class="caller-hero-banner glass-card">
+          <img src="/assets/friends_multiplayer_3d_banner.png" alt="3D Friends Arcade" class="hopper-banner-img" />
+          <div class="banner-overlay-content">
+            <span class="banner-chip">👥 MULTIPLAYER ARCADE</span>
+            <h2 class="banner-title glow-text">PLAY WITH FRIENDS</h2>
+          </div>
+        </div>
+
+        <div class="online-lobby-card glass-card">
+          <div class="friends-hero-banner">
+            <div class="hero-icon">👥</div>
+            <h2>Play with Friends</h2>
+            <p>Host or join a real-time multiplayer Bingo room anywhere!</p>
+          </div>
+
+          <div class="form-group nickname-group">
+            <label for="player-nickname">Your Nickname:</label>
+            <input type="text" id="player-nickname" class="app-input" value="Player" placeholder="Enter your name...">
+          </div>
+
+          <!-- Segmented Sub-Toggle: Create Room vs Join Room -->
+          <div class="segmented-mode-toggle">
+            <button id="tab-sub-create" class="segmented-btn active">➕ Create Room</button>
+            <button id="tab-sub-join" class="segmented-btn">🔑 Join Room</button>
+          </div>
+
+          <!-- Lobby Action Panels -->
+          <div id="room-setup-actions" class="room-setup-actions">
+            
+            <!-- Create Room Panel -->
+            <div id="panel-sub-create" class="setup-box sub-panel">
+              <h4>Host a Private Match</h4>
+              <p>Select what game mode you want to play with friends:</p>
+              
+              <div class="room-game-options">
+                <div class="game-opt-card selected" id="opt-mode-grid" data-mode="grid-battle">
+                  <div class="opt-icon">⚔️</div>
+                  <div class="opt-info">
+                    <h5>5x5 Grid Battle</h5>
+                    <span class="badge-players">👥 2 Players (1v1 Duel)</span>
+                  </div>
+                </div>
+
+                <div class="game-opt-card" id="opt-mode-c75" data-mode="caller-75">
+                  <div class="opt-icon">🎉</div>
+                  <div class="opt-info">
+                    <h5>75-Ball Party</h5>
+                    <span class="badge-players">👨‍👩‍👧‍👦 4 to 5 Players</span>
+                  </div>
+                </div>
+              </div>
+
+              <button id="btn-create-room" class="app-btn btn-primary btn-large btn-full">
+                <i data-lucide="plus-circle"></i> Create Room Now
+              </button>
+            </div>
+
+            <!-- Join Room Panel -->
+            <div id="panel-sub-join" class="setup-box sub-panel hidden">
+              <h4>Join Friend's Room</h4>
+              <p>Enter the 6-digit Room Code to enter the match.</p>
+              <div class="join-input-group">
+                <input type="text" id="input-room-code" class="app-input uppercase" placeholder="e.g. BINGO-4892" maxlength="10">
+                <button id="btn-join-room-submit" class="app-btn btn-accent btn-large">
+                  <i data-lucide="log-in"></i> Join Room
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Active Room Connected HUD (Dedicated Room Key Panel) -->
+          <div id="active-room-hud" class="active-room-hud hidden glass-card">
+            
+            <!-- Room Key Display Panel -->
+            <div class="room-key-card">
+              <span class="key-label">🔑 YOUR ROOM KEY (SHARE WITH FRIENDS)</span>
+              <div class="key-code-row">
+                <span class="key-code-text" id="active-room-code-display">BINGO-4892</span>
+                <button id="btn-copy-room-link" class="btn-copy-key" title="Copy Key">
+                  <i data-lucide="copy"></i> COPY KEY
+                </button>
+              </div>
+              <p class="key-subtext">Friends can enter this key in <strong>Join Room</strong> to join your lobby!</p>
+            </div>
+
+            <div class="room-mode-banner">
+              <span id="selected-room-mode-badge" class="mode-badge">⚔️ 5x5 Battle (2 Players Max)</span>
+            </div>
+
+            <div class="connected-players-list">
+              <div class="list-header">
+                <span class="list-title">Connected Friends (<span id="player-count-num">1</span>):</span>
+                <span class="max-capacity-badge" id="room-capacity-display">1 / 2 Players</span>
+              </div>
+              <div id="room-player-badges" class="player-badges-container">
+                <!-- Populated dynamically: Player 1 (Host), Player 2, Player 3... -->
+              </div>
+            </div>
+
+            <div id="host-room-controls" class="host-room-controls hidden">
+              <button class="app-btn btn-primary btn-large btn-full" id="btn-host-start-game">
+                🚀 Start Game Now
+              </button>
+            </div>
+
+            <div class="room-actions">
+              <button id="btn-leave-room" class="app-btn btn-secondary danger-text">
+                <i data-lucide="log-out"></i> Leave Room
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+
+
+    <!-- Bottom Mobile Toast / Notification Bar -->
+    <div id="app-toast" class="app-toast hidden">
+      <span id="toast-message">Notification message</span>
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="modal-victory" class="app-modal victory-modal hidden">
+      <div class="modal-content glass-card victory-card">
+        <button class="close-modal victory-close-btn" id="btn-victory-close" title="Close & View Board"><i data-lucide="x"></i></button>
+        <div class="trophy-banner">
+          <span class="trophy-icon">🏆</span>
+          <h2 id="victory-title" class="glow-text">BINGO VICTORY!</h2>
+        </div>
+        <p id="victory-desc">Congratulations! You completed the Bingo pattern!</p>
+        <div class="victory-stats glass-card" id="victory-stats">
+          <!-- Stats breakdown -->
+        </div>
+        <div class="modal-actions">
+          <button id="btn-victory-replay" class="app-btn btn-primary btn-large">
+            <i data-lucide="rotate-ccw"></i> Play Again
+          </button>
+          <button id="btn-victory-view-board" class="app-btn btn-secondary btn-large">
+            <i data-lucide="eye"></i> View Board
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Room Created / Lobby Popup Modal -->
+    <div id="modal-room-lobby" class="app-modal hidden">
+      <div class="modal-content glass-card lobby-modal-card">
+        <button class="close-modal lobby-close-btn" id="btn-close-room-modal" title="Close Popup"><i data-lucide="x"></i></button>
+
+        <div class="lobby-popup-header">
+          <div class="live-dot-pulse">● LIVE ROOM LOBBY</div>
+          <h2 class="popup-title">🎉 Room Created!</h2>
+        </div>
+
+        <div class="room-key-showcase">
+          <span class="key-title">🔑 YOUR ROOM KEY (SHARE WITH FRIENDS)</span>
+          <div class="key-box">
+            <span id="modal-room-code" class="neon-key-code">BINGO-4892</span>
+            <button id="btn-copy-modal-key" class="app-btn btn-primary btn-sm">
+              <i data-lucide="copy"></i> COPY KEY
+            </button>
+          </div>
+          <p class="key-hint">Tell friends to click <strong>"Join Room"</strong> & enter this key!</p>
+        </div>
+
+        <div class="lobby-players-section">
+          <div class="section-title-row">
+            <span>👥 Connected Friends (<span id="modal-player-count">1</span>)</span>
+            <span id="modal-capacity-badge" class="badge-mint">1 / 2 Players</span>
+          </div>
+          <div id="modal-players-list" class="players-list-grid">
+            <!-- Populated dynamically: 👑 Player 1 (Host), 👤 Player 2... -->
+          </div>
+        </div>
+
+        <div id="modal-host-actions" class="modal-actions">
+          <button id="btn-modal-start-game" class="app-btn btn-primary btn-large btn-full pulse-glow">
+            🚀 START GAME NOW
+          </button>
+        </div>
+
+        <div id="modal-guest-waiting" class="guest-waiting-banner hidden">
+          <span class="pulse-icon">⏳</span> Waiting for Room Leader (Player 1) to start the match...
+        </div>
+
+        <div class="modal-footer-actions">
+          <button id="btn-modal-leave-room" class="btn-text danger-text">
+            <i data-lucide="log-out"></i> Leave Room
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistics & Achievements Modal -->
+    <div id="modal-stats" class="app-modal hidden">
+      <div class="modal-content glass-card stats-modal-content">
+        <div class="modal-header">
+          <h3>🏆 Bingo Master Statistics & Trophies</h3>
+          <button class="close-modal" id="btn-close-stats"><i data-lucide="x"></i></button>
+        </div>
+        <div id="stats-container-body" class="stats-modal-body">
+          <!-- Populated by StatsManager -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Startup Player Profile / Nickname Setup Modal -->
+    <div id="modal-nickname-setup" class="app-modal nickname-modal hidden">
+      <div class="modal-content glass-card nickname-card">
+        <div class="nickname-hero-header">
+          <div class="hero-avatar-ring">
+            <span class="hero-avatar">👤</span>
+          </div>
+          <h2 class="glow-text">Welcome Player!</h2>
+          <p>Choose your unique player nickname to enter Bingo Master:</p>
+        </div>
+
+        <div class="nickname-form-group">
+          <label for="startup-player-name">Player Nickname:</label>
+          <div class="nickname-input-wrapper">
+            <input type="text" id="startup-player-name" class="app-input nickname-input" placeholder="Enter nickname..." maxlength="15" autocomplete="off">
+            <span id="name-status-indicator" class="name-status-icon"></span>
+          </div>
+          <div id="name-error-msg" class="name-error-badge hidden">⚠️ Name not available! Please choose another name.</div>
+        </div>
+
+        <button id="btn-save-nickname" class="app-btn btn-primary btn-large btn-full pulse-glow">
+          🚀 ENTER BINGO MASTER
+        </button>
+      </div>
+    </div>
+
+    <!-- iOS Home Bar Indicator -->
+    <div class="ios-home-indicator"></div>
+  </div>
+
+  <canvas id="confetti-canvas"></canvas>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -59,12 +59,213 @@ const roomSchema = new mongoose.Schema({
 
 const Room = mongoose.model('Room', roomSchema);
 
+// MongoDB Schema for Registered Players & Trophies
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true },
+  trophies: { type: Number, default: 100 },
+  wins: { type: Number, default: 0 },
+  losses: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const User = mongoose.model('User', userSchema);
+
 // Hybrid Storage: MongoDB with In-Memory fallback
 const memoryRooms = new Map();
+const memoryUsers = new Map();
+
+// Helper to update player trophies in DB & In-Memory
+async function adjustUserTrophies(username, delta) {
+  if (!username) return null;
+  const cleanUser = username.trim().toLowerCase();
+
+  // Try DB
+  if (isDbConnected && mongoose.connection.readyState === 1) {
+    try {
+      const dbUser = await User.findOne({ username: cleanUser });
+      if (dbUser) {
+        dbUser.trophies = Math.max(0, dbUser.trophies + delta);
+        if (delta > 0) dbUser.wins += 1;
+        if (delta < 0) dbUser.losses += 1;
+        await dbUser.save();
+        return { username: dbUser.username, trophies: dbUser.trophies, wins: dbUser.wins, losses: dbUser.losses };
+      }
+    } catch (e) {
+      console.error('Error updating DB trophies:', e);
+    }
+  }
+
+  // Memory Fallback
+  let memUser = memoryUsers.get(cleanUser);
+  if (!memUser) {
+    memUser = { username, trophies: 100, wins: 0, losses: 0 };
+  }
+  memUser.trophies = Math.max(0, memUser.trophies + delta);
+  if (delta > 0) memUser.wins += 1;
+  if (delta < 0) memUser.losses += 1;
+  memoryUsers.set(cleanUser, memUser);
+  return memUser;
+}
+
+// REST API for User Auth & Trophies
+app.post('/api/register', async (req, res) => {
+  const { username, password } = req.body || {};
+  const cleanName = (username || '').trim();
+  const cleanNameLower = cleanName.toLowerCase();
+
+  if (!cleanName || cleanName.length < 2) {
+    return res.status(400).json({ success: false, error: 'Username must be at least 2 characters long!' });
+  }
+  if (!password || password.length < 3) {
+    return res.status(400).json({ success: false, error: 'Password must be at least 3 characters long!' });
+  }
+
+  try {
+    if (isDbConnected && mongoose.connection.readyState === 1) {
+      const existing = await User.findOne({ username: cleanNameLower });
+      if (existing) {
+        return res.status(400).json({ success: false, error: 'Username is already taken! Please log in.' });
+      }
+      const newUser = new User({ username: cleanNameLower, password, trophies: 100 });
+      await newUser.save();
+      return res.json({ success: true, user: { username: cleanName, trophies: 100, wins: 0, losses: 0 } });
+    } else {
+      if (memoryUsers.has(cleanNameLower)) {
+        return res.status(400).json({ success: false, error: 'Username is already taken! Please log in.' });
+      }
+      const memUser = { username: cleanName, password, trophies: 100, wins: 0, losses: 0 };
+      memoryUsers.set(cleanNameLower, memUser);
+      return res.json({ success: true, user: { username: cleanName, trophies: 100, wins: 0, losses: 0 } });
+    }
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Registration failed server-side' });
+  }
+});
+
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body || {};
+  const cleanName = (username || '').trim();
+  const cleanNameLower = cleanName.toLowerCase();
+
+  if (!cleanName || !password) {
+    return res.status(400).json({ success: false, error: 'Username and password are required!' });
+  }
+
+  try {
+    if (isDbConnected && mongoose.connection.readyState === 1) {
+      const user = await User.findOne({ username: cleanNameLower });
+      if (!user || user.password !== password) {
+        return res.status(400).json({ success: false, error: 'Invalid username or password!' });
+      }
+      return res.json({ success: true, user: { username: user.username, trophies: user.trophies, wins: user.wins, losses: user.losses } });
+    } else {
+      const memUser = memoryUsers.get(cleanNameLower);
+      if (!memUser || memUser.password !== password) {
+        return res.status(400).json({ success: false, error: 'Invalid username or password!' });
+      }
+      return res.json({ success: true, user: { username: memUser.username, trophies: memUser.trophies, wins: memUser.wins, losses: memUser.losses } });
+    }
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Login failed server-side' });
+  }
+});
+
+app.post('/api/trophies', async (req, res) => {
+  const { username, delta } = req.body || {};
+  if (!username || typeof delta !== 'number') {
+    return res.status(400).json({ success: false, error: 'Username and numeric delta required' });
+  }
+  const updated = await adjustUserTrophies(username, delta);
+  return res.json({ success: true, user: updated });
+});
 
 // Real-Time Socket.IO Multiplayer Logic
 io.on('connection', (socket) => {
   console.log(`🔌 Player connected: ${socket.id}`);
+
+  // Socket Auth: Register
+  socket.on('auth_register', async ({ username, password }, callback) => {
+    const cleanName = (username || '').trim();
+    const cleanNameLower = cleanName.toLowerCase();
+
+    if (!cleanName || cleanName.length < 2) {
+      const errRes = { success: false, error: 'Username must be at least 2 characters long!' };
+      if (typeof callback === 'function') callback(errRes);
+      return;
+    }
+    if (!password || password.length < 3) {
+      const errRes = { success: false, error: 'Password must be at least 3 characters long!' };
+      if (typeof callback === 'function') callback(errRes);
+      return;
+    }
+
+    try {
+      if (isDbConnected && mongoose.connection.readyState === 1) {
+        const existing = await User.findOne({ username: cleanNameLower });
+        if (existing) {
+          const res = { success: false, error: 'Username already taken! Try logging in.' };
+          if (typeof callback === 'function') callback(res);
+          return;
+        }
+        const newUser = new User({ username: cleanNameLower, password, trophies: 100 });
+        await newUser.save();
+        const res = { success: true, user: { username: cleanName, trophies: 100, wins: 0, losses: 0 } };
+        if (typeof callback === 'function') callback(res);
+      } else {
+        if (memoryUsers.has(cleanNameLower)) {
+          const res = { success: false, error: 'Username already taken! Try logging in.' };
+          if (typeof callback === 'function') callback(res);
+          return;
+        }
+        const memUser = { username: cleanName, password, trophies: 100, wins: 0, losses: 0 };
+        memoryUsers.set(cleanNameLower, memUser);
+        const res = { success: true, user: { username: cleanName, trophies: 100, wins: 0, losses: 0 } };
+        if (typeof callback === 'function') callback(res);
+      }
+    } catch (e) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Registration error' });
+    }
+  });
+
+  // Socket Auth: Login
+  socket.on('auth_login', async ({ username, password }, callback) => {
+    const cleanName = (username || '').trim();
+    const cleanNameLower = cleanName.toLowerCase();
+
+    try {
+      if (isDbConnected && mongoose.connection.readyState === 1) {
+        const user = await User.findOne({ username: cleanNameLower });
+        if (!user || user.password !== password) {
+          const res = { success: false, error: 'Invalid username or password!' };
+          if (typeof callback === 'function') callback(res);
+          return;
+        }
+        const res = { success: true, user: { username: user.username, trophies: user.trophies, wins: user.wins, losses: user.losses } };
+        if (typeof callback === 'function') callback(res);
+      } else {
+        const memUser = memoryUsers.get(cleanNameLower);
+        if (!memUser || memUser.password !== password) {
+          const res = { success: false, error: 'Invalid username or password!' };
+          if (typeof callback === 'function') callback(res);
+          return;
+        }
+        const res = { success: true, user: { username: memUser.username, trophies: memUser.trophies, wins: memUser.wins, losses: memUser.losses } };
+        if (typeof callback === 'function') callback(res);
+      }
+    } catch (e) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Login error' });
+    }
+  });
+
+  // Socket Event: Update Trophies (+5 / -5 / +1)
+  socket.on('update_trophies', async ({ username, delta }, callback) => {
+    const updated = await adjustUserTrophies(username, delta);
+    if (updated) {
+      socket.emit('trophies_updated', updated);
+      if (typeof callback === 'function') callback({ success: true, user: updated });
+    }
+  });
 
   // Check Unique Nickname Availability Across Server
   socket.on('check_nickname', ({ nickname }, callback) => {

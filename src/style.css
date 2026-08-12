@@ -2498,3 +2498,189 @@ body {
   0% { opacity: 0; transform: translateY(-4px); }
   100% { opacity: 1; transform: translateY(0); }
 }
+
+/* ==========================================================================
+   USER AUTHENTICATION & TROPHY SYSTEM STYLES
+   ========================================================================== */
+
+.btn-user-auth {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 6px 12px;
+  border-radius: 20px;
+  color: #ffffff;
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.15);
+  transition: all 0.25s ease;
+}
+
+.btn-user-auth:hover {
+  border-color: var(--ios-gold);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.35);
+  transform: translateY(-1px);
+}
+
+.user-avatar-icon {
+  font-size: 14px;
+}
+
+.header-user-name {
+  max-width: 80px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #e2e8f0;
+}
+
+.header-user-trophies {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+/* Auth Modal Card & Tabs */
+.auth-modal-card {
+  max-width: 380px !important;
+  width: 90%;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+.auth-tabs {
+  display: flex;
+  background: rgba(15, 23, 42, 0.9);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 16px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 800;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-tab.active {
+  background: linear-gradient(135deg, var(--ios-indigo), #4f46e5);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-form .input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.auth-form label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ios-gold);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.auth-error-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f43f5e;
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.auth-success-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.auth-footer-info {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.15);
+  font-size: 11px;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+
+.auth-footer-info p {
+  margin: 0;
+}
+
+/* Floating Trophy Gain/Loss Toast Notification */
+.trophy-toast {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 99999;
+  padding: 12px 20px;
+  border-radius: 30px;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  animation: trophyToastIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.trophy-toast.gain {
+  background: linear-gradient(135deg, #059669, #10b981);
+  border: 2px solid #34d399;
+  color: #ffffff;
+}
+
+.trophy-toast.loss {
+  background: linear-gradient(135deg, #e11d48, #f43f5e);
+  border: 2px solid #fb7185;
+  color: #ffffff;
+}
+
+.trophy-toast.animate-out {
+  animation: trophyToastOut 0.5s ease forwards;
+}
+
+@keyframes trophyToastIn {
+  0% { opacity: 0; transform: translateY(-20px) scale(0.7); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes trophyToastOut {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-30px) scale(0.8); }
+}

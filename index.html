@@ -71,6 +71,12 @@
       </div>
       
       <div class="header-actions">
+        <button id="btn-user-auth" class="btn-user-auth" title="Player Account & Trophies">
+          <span id="header-user-avatar" class="user-avatar-icon">👤</span>
+          <span id="header-user-name" class="header-user-name">Login</span>
+          <span id="header-user-trophies" class="header-user-trophies">🏆 100</span>
+        </button>
+
         <button id="btn-online-room" class="icon-btn glow-accent" title="Online Multiplayer Rooms">
           <i data-lucide="globe"></i>
         </button>
@@ -752,6 +758,51 @@
         <button id="btn-save-nickname" class="app-btn btn-primary btn-large btn-full pulse-glow">
           🚀 ENTER BINGO MASTER
         </button>
+      </div>
+    </div>
+
+    <!-- User Registration & Login Modal -->
+    <div id="modal-auth" class="modal-overlay hidden">
+      <div class="modal-content glass-card auth-modal-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-icon">🔐</span>
+            <h3 id="auth-modal-title">Player Account</h3>
+          </div>
+          <button class="btn-close-modal" id="btn-close-auth-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <!-- Auth Tabs -->
+          <div class="auth-tabs">
+            <button id="tab-auth-login" class="auth-tab active">Login</button>
+            <button id="tab-auth-register" class="auth-tab">Register</button>
+          </div>
+
+          <form id="form-auth" class="auth-form">
+            <div class="input-group">
+              <label for="auth-username">Unique Username</label>
+              <input type="text" id="auth-username" class="app-input" placeholder="Enter username..." required minlength="3" autocomplete="username">
+            </div>
+            
+            <div class="input-group">
+              <label for="auth-password">Password</label>
+              <input type="password" id="auth-password" class="app-input" placeholder="Enter password..." required minlength="3" autocomplete="current-password">
+            </div>
+
+            <div id="auth-error-msg" class="auth-error-badge hidden"></div>
+            <div id="auth-success-msg" class="auth-success-badge hidden"></div>
+
+            <button type="submit" id="btn-auth-submit" class="app-btn btn-primary btn-full pulse-glow" style="margin-top: 15px;">
+              <span id="btn-auth-text">Login Now 🚀</span>
+            </button>
+          </form>
+          
+          <div class="auth-footer-info">
+            <p>✨ <strong>New Players:</strong> Get <strong>100 Trophies 🏆</strong> on registration!</p>
+            <p>⚔️ <strong>Multiplayer Match:</strong> Win (+5 🏆) | Loss (-5 🏆)</p>
+            <p>🤖 <strong>Bot Match Win:</strong> (+1 🏆)</p>
+          </div>
+        </div>
       </div>
     </div>
 

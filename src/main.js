@@ -6,10 +6,17 @@ import { Caller75Game } from './callerBingo.js';
 import { CustomBingoBuilder } from './customBingo.js';
 import { statsManager } from './stats.js';
 import { multiplayerManager } from './multiplayer.js';
+import { authManager } from './auth.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize Lucide Icons
   createIcons({ icons });
+
+  // Initialize Auth UI & Socket integration
+  authManager.initUI();
+  if (multiplayerManager.socket) {
+    authManager.setSocket(multiplayerManager.socket);
+  }
 
   // ==========================================
   // CINEMATIC GAME INTRO ANIMATION CONTROLLER
@@ -258,8 +265,25 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }
 
-    // Track Stats
+    // Track Stats & Trophy Rewards
     const isWin = !winner.includes('Bot') && winner !== 'Player 2';
+    const isBotMatch = opponentType && opponentType.includes('ai');
+    const isMultiplayer = multiplayerManager.isConnected || opponentType === 'multiplayer';
+
+    if (authManager.isLoggedIn()) {
+      if (isMultiplayer) {
+        if (isWin) {
+          authManager.updateTrophies(5, 'multiplayer_win');
+        } else {
+          authManager.updateTrophies(-5, 'multiplayer_loss');
+        }
+      } else if (isBotMatch && isWin) {
+        authManager.updateTrophies(1, 'bot_win');
+      } else if (isWin) {
+        authManager.updateTrophies(1, 'game_win');
+      }
+    }
+
     const newlyUnlocked = statsManager.recordGameEnd({
       gameType,
       isWin,

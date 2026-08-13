@@ -26,12 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // CINEMATIC GAME INTRO ANIMATION CONTROLLER
   // ==========================================
-  const gameIntroOverlay = document.getElementById('game-intro-overlay');
-  const btnSkipIntro = document.getElementById('btn-skip-intro');
-  const introLettersContainer = document.getElementById('intro-letters-container');
-  const introMascot = document.getElementById('intro-mascot');
-  const introBombFlash = document.getElementById('intro-bomb-flash');
-
   // Nickname Setup Modal Elements
   const modalNicknameSetup = document.getElementById('modal-nickname-setup');
   const startupPlayerName = document.getElementById('startup-player-name');
@@ -39,8 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const nameErrorMsg = document.getElementById('name-error-msg');
   const btnSaveNickname = document.getElementById('btn-save-nickname');
   const playerNickname = document.getElementById('player-nickname');
-
-  let introTimeouts = [];
 
   const openNicknameModal = () => {
     const savedName = localStorage.getItem('bingo_player_nickname');
@@ -55,142 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  const closeIntro = () => {
-    introTimeouts.forEach(t => clearTimeout(t));
-    if (gameIntroOverlay) {
-      gameIntroOverlay.classList.add('fade-out');
-      setTimeout(() => {
-        gameIntroOverlay.classList.add('hidden');
-        openNicknameModal();
-      }, 500);
-    } else {
-      openNicknameModal();
-    }
-  };
-
-  if (btnSkipIntro) {
-    btnSkipIntro.addEventListener('click', closeIntro);
-  }
-
-  // Real-time Nickname Availability Check Handler
-  let nicknameCheckDebounce = null;
-  if (startupPlayerName) {
-    startupPlayerName.addEventListener('input', () => {
-      clearTimeout(nicknameCheckDebounce);
-      const val = startupPlayerName.value.trim();
-
-      if (!val || val.length < 2) {
-        if (nameStatusIndicator) nameStatusIndicator.textContent = '';
-        if (nameErrorMsg) nameErrorMsg.classList.add('hidden');
-        startupPlayerName.classList.remove('error', 'valid');
-        return;
-      }
-
-      nicknameCheckDebounce = setTimeout(() => {
-        multiplayerManager.checkNickname(val, (res) => {
-          if (res.available) {
-            if (nameStatusIndicator) {
-              nameStatusIndicator.textContent = '✓';
-              nameStatusIndicator.style.color = 'var(--ios-mint)';
-            }
-            if (nameErrorMsg) nameErrorMsg.classList.add('hidden');
-            startupPlayerName.classList.remove('error');
-            startupPlayerName.classList.add('valid');
-            if (btnSaveNickname) btnSaveNickname.disabled = false;
-          } else {
-            if (nameStatusIndicator) {
-              nameStatusIndicator.textContent = '❌';
-              nameStatusIndicator.style.color = 'var(--ios-pink)';
-            }
-            if (nameErrorMsg) {
-              nameErrorMsg.textContent = `⚠️ Name not available! Please choose another nickname.`;
-              nameErrorMsg.classList.remove('hidden');
-            }
-            startupPlayerName.classList.remove('valid');
-            startupPlayerName.classList.add('error');
-            if (btnSaveNickname) btnSaveNickname.disabled = true;
-          }
-        });
-      }, 300);
-    });
-  }
-
-  if (btnSaveNickname) {
-    btnSaveNickname.addEventListener('click', () => {
-      const val = startupPlayerName ? startupPlayerName.value.trim() : '';
-      if (!val || val.length < 2) {
-        showToast('Please enter a valid nickname (min 2 characters)!');
-        return;
-      }
-
-      multiplayerManager.checkNickname(val, (res) => {
-        if (res.available) {
-          localStorage.setItem('bingo_player_nickname', val);
-          if (playerNickname) playerNickname.value = val;
-          multiplayerManager.myPlayerName = val;
-          if (modalNicknameSetup) modalNicknameSetup.classList.add('hidden');
-          showToast(`🎉 Welcome ${val}! Entered Bingo Master!`, 3000);
-          sound.playLineChime();
-        } else {
-          if (nameErrorMsg) {
-            nameErrorMsg.textContent = `⚠️ Name not available! Please choose another nickname.`;
-            nameErrorMsg.classList.remove('hidden');
-          }
-          if (startupPlayerName) startupPlayerName.classList.add('error');
-          sound.playPop();
-        }
-      });
-    });
-  }
-
-  const robotBeam = document.getElementById('robot-beam');
-  const tractorBeamsContainer = document.getElementById('tractor-beams-container');
-
-  if (gameIntroOverlay) {
-    // Failsafe Timer: Guarantee intro overlay closes in max 3.2 seconds no matter what!
-    const failsafeTimer = setTimeout(() => {
-      closeIntro();
-    }, 3200);
-
-    // Tap anywhere on screen to close intro immediately
-    gameIntroOverlay.addEventListener('click', () => {
-      clearTimeout(failsafeTimer);
-      closeIntro();
-    });
-
-    // Phase 1 (0.5s): Mascot drops in
-    introTimeouts.push(setTimeout(() => {
-      if (introMascot) introMascot.classList.remove('hidden');
-      try { sound.playWhoosh(); } catch (e) {}
-    }, 500));
-
-    // Phase 1.5 (1.0s): Beams appear
-    introTimeouts.push(setTimeout(() => {
-      if (robotBeam) robotBeam.classList.remove('hidden');
-      if (tractorBeamsContainer) tractorBeamsContainer.classList.remove('hidden');
-      try { sound.playPop(); } catch (e) {}
-    }, 1000));
-
-    // Phase 2 (1.6s): Letters join
-    introTimeouts.push(setTimeout(() => {
-      if (introLettersContainer) {
-        introLettersContainer.classList.remove('scattered');
-        introLettersContainer.classList.add('joined');
-      }
-      if (tractorBeamsContainer) {
-        tractorBeamsContainer.classList.add('contracting');
-      }
-      try { sound.playPop(); } catch (e) {}
-    }, 1600));
-
-    // Phase 3 (2.8s): Auto close intro overlay
-    introTimeouts.push(setTimeout(() => {
-      clearTimeout(failsafeTimer);
-      closeIntro();
-    }, 2800));
-  } else {
-    openNicknameModal();
-  }
+  // Open Game Instantly
+  openNicknameModal();
 
   // DOM Elements
   const appRoot = document.getElementById('app-root');

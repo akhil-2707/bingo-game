@@ -2092,16 +2092,14 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.4s ease;
 }
 
-.game-intro-overlay.fade-out {
-  opacity: 0;
-  pointer-events: none;
-}
-
+.game-intro-overlay.fade-out,
 .game-intro-overlay.hidden {
-  display: none;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  display: none !important;
 }
 
 .btn-skip-intro {

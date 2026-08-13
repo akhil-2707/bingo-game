@@ -60,10 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
     introTimeouts.forEach(t => clearTimeout(t));
     if (gameIntroOverlay) {
       gameIntroOverlay.classList.add('fade-out');
-      setTimeout(() => {
-        gameIntroOverlay.classList.add('hidden');
-        openNicknameModal();
-      }, 400);
+      gameIntroOverlay.classList.add('hidden');
+      gameIntroOverlay.style.display = 'none';
+      openNicknameModal();
     } else {
       openNicknameModal();
     }
@@ -80,20 +79,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tap anywhere to skip intro
     gameIntroOverlay.addEventListener('click', closeIntro);
 
-    // Phase 1 (0.4s): Mascot appears
+    // Hard Failsafe: Hide overlay after max 1.8 seconds NO MATTER WHAT
+    setTimeout(() => {
+      closeIntro();
+    }, 1800);
+
+    // Phase 1 (0.3s): Mascot appears & beams fire
     introTimeouts.push(setTimeout(() => {
       if (introMascot) introMascot.classList.remove('hidden');
-      try { sound.playWhoosh(); } catch (e) {}
-    }, 400));
-
-    // Phase 1.5 (0.8s): Energy beams
-    introTimeouts.push(setTimeout(() => {
       if (robotBeam) robotBeam.classList.remove('hidden');
       if (tractorBeamsContainer) tractorBeamsContainer.classList.remove('hidden');
-      try { sound.playPop(); } catch (e) {}
-    }, 800));
+      try { sound.playWhoosh(); } catch (e) {}
+    }, 300));
 
-    // Phase 2 (1.4s): Letters join
+    // Phase 2 (0.7s): Letters join in center stage
     introTimeouts.push(setTimeout(() => {
       if (introLettersContainer) {
         introLettersContainer.classList.remove('scattered');
@@ -101,12 +100,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (tractorBeamsContainer) tractorBeamsContainer.classList.add('contracting');
       try { sound.playPop(); } catch (e) {}
-    }, 1400));
+    }, 700));
 
-    // Phase 3 (2.5s): Auto close intro and reveal game
+    // Phase 3 (1.5s): Auto close intro overlay to reveal main game
     introTimeouts.push(setTimeout(() => {
       closeIntro();
-    }, 2500));
+    }, 1500));
   } else {
     openNicknameModal();
   }

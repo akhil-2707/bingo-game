@@ -35,11 +35,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const playerNickname = document.getElementById('player-nickname');
 
   const openNicknameModal = () => {
-    const savedName = localStorage.getItem('bingo_player_nickname');
+    let savedName = localStorage.getItem('bingo_player_nickname');
+    if (!savedName && authManager.isLoggedIn()) {
+      savedName = authManager.currentUser.username;
+      localStorage.setItem('bingo_player_nickname', savedName);
+    }
+
     if (savedName) {
       if (playerNickname) playerNickname.value = savedName;
       if (startupPlayerName) startupPlayerName.value = savedName;
       multiplayerManager.myPlayerName = savedName;
+      if (modalNicknameSetup) modalNicknameSetup.classList.add('hidden');
+      return;
     }
 
     if (modalNicknameSetup && (!savedName || modalNicknameSetup.dataset.forceOpen)) {
@@ -49,6 +56,77 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Open Game Instantly
   openNicknameModal();
+
+  if (startupPlayerName) {
+    let checkTimeout = null;
+    startupPlayerName.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      if (checkTimeout) clearTimeout(checkTimeout);
+
+      if (!val || val.length < 2) {
+        if (nameStatusIndicator) nameStatusIndicator.textContent = '';
+        if (nameErrorMsg) nameErrorMsg.classList.add('hidden');
+        startupPlayerName.classList.remove('error', 'valid');
+        if (btnSaveNickname) btnSaveNickname.disabled = true;
+        return;
+      }
+
+      checkTimeout = setTimeout(() => {
+        multiplayerManager.checkNickname(val, (res) => {
+          if (res.available) {
+            if (nameStatusIndicator) {
+              nameStatusIndicator.textContent = '✓';
+              nameStatusIndicator.style.color = 'var(--ios-mint)';
+            }
+            if (nameErrorMsg) nameErrorMsg.classList.add('hidden');
+            startupPlayerName.classList.remove('error');
+            startupPlayerName.classList.add('valid');
+            if (btnSaveNickname) btnSaveNickname.disabled = false;
+          } else {
+            if (nameStatusIndicator) {
+              nameStatusIndicator.textContent = '❌';
+              nameStatusIndicator.style.color = 'var(--ios-pink)';
+            }
+            if (nameErrorMsg) {
+              nameErrorMsg.textContent = `⚠️ Name not available! Please choose another nickname.`;
+              nameErrorMsg.classList.remove('hidden');
+            }
+            startupPlayerName.classList.remove('valid');
+            startupPlayerName.classList.add('error');
+            if (btnSaveNickname) btnSaveNickname.disabled = true;
+          }
+        });
+      }, 300);
+    });
+  }
+
+  if (btnSaveNickname) {
+    btnSaveNickname.addEventListener('click', () => {
+      const val = startupPlayerName ? startupPlayerName.value.trim() : '';
+      if (!val || val.length < 2) {
+        showToast('Please enter a valid nickname (min 2 characters)!');
+        return;
+      }
+
+      multiplayerManager.checkNickname(val, (res) => {
+        if (res.available) {
+          localStorage.setItem('bingo_player_nickname', val);
+          if (playerNickname) playerNickname.value = val;
+          multiplayerManager.myPlayerName = val;
+          if (modalNicknameSetup) modalNicknameSetup.classList.add('hidden');
+          showToast(`🎉 Welcome ${val}! Entered Bingo Master!`, 3000);
+          sound.playLineChime();
+        } else {
+          if (nameErrorMsg) {
+            nameErrorMsg.textContent = `⚠️ Name not available! Please choose another nickname.`;
+            nameErrorMsg.classList.remove('hidden');
+          }
+          if (startupPlayerName) startupPlayerName.classList.add('error');
+          sound.playPop();
+        }
+      });
+    });
+  }
 
   // DOM Elements
   const appRoot = document.getElementById('app-root');

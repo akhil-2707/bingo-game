@@ -184,8 +184,11 @@ app.post('/api/login', async (req, res) => {
   try {
     if (isDbConnected && mongoose.connection.readyState === 1) {
       let user = await User.findOne({ username: cleanNameLower });
-      if (!user || user.password !== password) {
-        return res.status(400).json({ success: false, error: 'Invalid username or password!' });
+      if (!user) {
+        return res.status(400).json({ success: false, error: '❌ No account found with this username! Please register.' });
+      }
+      if (user.password !== password) {
+        return res.status(400).json({ success: false, error: '❌ Wrong password! Please check and try again.' });
       }
       if (!user.playerId) {
         user.playerId = generate6DigitId();
@@ -194,8 +197,11 @@ app.post('/api/login', async (req, res) => {
       return res.json({ success: true, user: { username: user.username, playerId: user.playerId, trophies: user.trophies, wins: user.wins, losses: user.losses, friends: user.friends || [] } });
     } else {
       let memUser = memoryUsers.get(cleanNameLower);
-      if (!memUser || memUser.password !== password) {
-        return res.status(400).json({ success: false, error: 'Invalid username or password!' });
+      if (!memUser) {
+        return res.status(400).json({ success: false, error: '❌ No account found with this username! Please register.' });
+      }
+      if (memUser.password !== password) {
+        return res.status(400).json({ success: false, error: '❌ Wrong password! Please check and try again.' });
       }
       if (!memUser.playerId) memUser.playerId = generate6DigitId();
       return res.json({ success: true, user: { username: memUser.username, playerId: memUser.playerId, trophies: memUser.trophies, wins: memUser.wins, losses: memUser.losses, friends: memUser.friends || [] } });

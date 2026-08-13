@@ -9,6 +9,11 @@ export class AuthManager {
     this.currentUser = this.loadSavedUser();
     this.socket = null;
     this.currentMode = 'login'; // 'login' or 'register'
+    this.regStep = 1; // 1: Username, 2: Password
+  }
+
+  isLoggedIn() {
+    return !!(this.currentUser && this.currentUser.username);
   }
 
   loadSavedUser() {
@@ -69,6 +74,112 @@ export class AuthManager {
 
   getPlayerId() {
     return this.currentUser ? (this.currentUser.playerId || '000000') : '000000';
+  }
+
+  async login(username, password) {
+    const cleanUser = (username || '').trim();
+    if (!cleanUser) {
+      return { success: false, error: 'Please enter your username!' };
+    }
+    if (!password) {
+      return { success: false, error: 'Please enter your password!' };
+    }
+
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: cleanUser, password })
+      });
+      const data = await response.json();
+      if (response.ok && data.success && data.user) {
+        this.saveUser(data.user);
+        if (this.socket && this.socket.connected) {
+          this.socket.emit('user_online', {
+            username: data.user.username,
+            playerId: data.user.playerId
+          });
+        }
+        return { success: true, user: data.user };
+      } else {
+        return { success: false, error: data.error || 'Invalid username or password!' };
+      }
+    } catch (e) {
+      console.error('Login request failed:', e);
+      return { success: false, error: 'Could not connect to backend server.' };
+    }
+  }
+
+  async register(username, password) {
+    const cleanUser = (username || '').trim();
+    if (!cleanUser || cleanUser.length < 2) {
+      return { success: false, error: 'Username must be at least 2 characters long!' };
+    }
+    if (!password || password.length < 3) {
+      return { success: false, error: 'Password must be at least 3 characters long!' };
+    }
+
+    try {
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: cleanUser, password })
+      });
+      const data = await response.json();
+      if (response.ok && data.success && data.user) {
+        this.saveUser(data.user);
+        if (this.socket && this.socket.connected) {
+          this.socket.emit('user_online', {
+            username: data.user.username,
+            playerId: data.user.playerId
+          });
+        }
+        return { success: true, user: data.user };
+      } else {
+        return { success: false, error: data.error || 'Registration failed!' };
+      }
+    } catch (e) {
+      console.error('Register request failed:', e);
+      return { success: false, error: 'Could not connect to backend server.' };
+    }
+  }
+
+  logout() {
+    this.saveUser(null);
+    this.updateHeaderProfileUI();
+  }
+
+  updateHeaderProfileUI() {
+    const nameEl = document.getElementById('header-user-name');
+    const trophiesEl = document.getElementById('header-user-trophies');
+    const avatarEl = document.getElementById('header-user-avatar');
+
+    if (this.isLoggedIn()) {
+      if (nameEl) {
+        nameEl.textContent = this.currentUser.username;
+        nameEl.title = this.currentUser.username;
+      }
+      if (trophiesEl) trophiesEl.textContent = `🏆 ${this.currentUser.trophies || 100}`;
+      if (avatarEl) avatarEl.textContent = '👑';
+    } else {
+      if (nameEl) {
+        nameEl.textContent = 'Login';
+        nameEl.title = 'Click to login or create account';
+      }
+      if (trophiesEl) trophiesEl.textContent = '🏆 100';
+      if (avatarEl) avatarEl.textContent = '👤';
+    }
+  }
+
+  promptLoginIfGuest() {
+    if (!this.isLoggedIn()) {
+      const authModal = document.getElementById('modal-auth');
+      if (authModal) {
+        authModal.classList.remove('hidden');
+      }
+      return false;
+    }
+    return true;
   }
 
   async updateTrophies(delta, modeName = '5x5 Battle') {
@@ -176,38 +287,6 @@ export class AuthManager {
     profileModal.classList.remove('hidden');
   }
 
-  logout() {
-    this.saveUser(null);
-    this.updateHeaderProfileUI();
-  }
-
-  updateHeaderProfileUI() {
-    const nameEl = document.getElementById('header-user-name');
-    const trophiesEl = document.getElementById('header-user-trophies');
-    const avatarEl = document.getElementById('header-user-avatar');
-
-    if (this.currentUser) {
-      if (nameEl) nameEl.textContent = this.currentUser.username;
-      if (trophiesEl) trophiesEl.textContent = `🏆 ${this.currentUser.trophies || 100}`;
-      if (avatarEl) avatarEl.textContent = '👑';
-    } else {
-      if (nameEl) nameEl.textContent = 'Register / Login';
-      if (trophiesEl) trophiesEl.textContent = '🏆 100';
-      if (avatarEl) avatarEl.textContent = '🔐';
-    }
-  }
-
-  promptLoginIfGuest() {
-    if (!this.isLoggedIn()) {
-      const authModal = document.getElementById('modal-auth');
-      if (authModal) {
-        authModal.classList.remove('hidden');
-      }
-      return false;
-    }
-    return true;
-  }
-
   initUI(statsManager) {
     const authBtn = document.getElementById('btn-user-auth');
     const authModal = document.getElementById('modal-auth');
@@ -221,23 +300,28 @@ export class AuthManager {
     const tabRegister = document.getElementById('tab-auth-register');
     const modalTitle = document.getElementById('auth-modal-title');
     const submitBtnText = document.getElementById('btn-auth-text');
+    const submitBtn = document.getElementById('btn-auth-submit');
+    const regNextBtn = document.getElementById('btn-reg-next');
+    const regStepsBar = document.getElementById('reg-steps-bar');
+    const regStep1Chip = document.getElementById('reg-step-1-chip');
+    const regStep2Chip = document.getElementById('reg-step-2-chip');
+    
+    const groupUsername = document.getElementById('group-auth-username');
+    const groupPassword = document.getElementById('group-auth-password');
+    const usernameInput = document.getElementById('auth-username');
+    const passwordInput = document.getElementById('auth-password');
     const errorMsg = document.getElementById('auth-error-msg');
     const successMsg = document.getElementById('auth-success-msg');
 
     this.updateHeaderProfileUI();
 
-    // Auto open Login / Register pop-up for guest players on first load
-    if (!this.isLoggedIn() && authModal) {
-      setTimeout(() => {
-        authModal.classList.remove('hidden');
-      }, 600);
-    }
-
+    // Show Login/Register button listener
     if (authBtn) {
       authBtn.addEventListener('click', () => {
         if (this.isLoggedIn()) {
           this.openProfileModal(statsManager);
         } else {
+          setMode('login');
           authModal?.classList.remove('hidden');
         }
       });
@@ -264,6 +348,30 @@ export class AuthManager {
       });
     }
 
+    const updateRegisterStepView = (step) => {
+      this.regStep = step;
+      if (errorMsg) errorMsg.classList.add('hidden');
+      if (successMsg) successMsg.classList.add('hidden');
+
+      if (step === 1) {
+        if (groupUsername) groupUsername.classList.remove('hidden');
+        if (groupPassword) groupPassword.classList.add('hidden');
+        if (regNextBtn) regNextBtn.classList.remove('hidden');
+        if (submitBtn) submitBtn.classList.add('hidden');
+        if (regStep1Chip) regStep1Chip.className = 'reg-step-chip active';
+        if (regStep2Chip) regStep2Chip.className = 'reg-step-chip';
+        if (usernameInput) usernameInput.focus();
+      } else {
+        if (groupUsername) groupUsername.classList.remove('hidden');
+        if (groupPassword) groupPassword.classList.remove('hidden');
+        if (regNextBtn) regNextBtn.classList.add('hidden');
+        if (submitBtn) submitBtn.classList.remove('hidden');
+        if (regStep1Chip) regStep1Chip.className = 'reg-step-chip';
+        if (regStep2Chip) regStep2Chip.className = 'reg-step-chip active';
+        if (passwordInput) passwordInput.focus();
+      }
+    };
+
     const setMode = (mode) => {
       this.currentMode = mode;
       if (errorMsg) errorMsg.classList.add('hidden');
@@ -274,23 +382,43 @@ export class AuthManager {
         tabRegister?.classList.remove('active');
         if (modalTitle) modalTitle.textContent = 'Player Login';
         if (submitBtnText) submitBtnText.textContent = 'Login Now 🚀';
+        if (regStepsBar) regStepsBar.classList.add('hidden');
+        if (groupUsername) groupUsername.classList.remove('hidden');
+        if (groupPassword) groupPassword.classList.remove('hidden');
+        if (regNextBtn) regNextBtn.classList.add('hidden');
+        if (submitBtn) submitBtn.classList.remove('hidden');
       } else {
         tabRegister?.classList.add('active');
         tabLogin?.classList.remove('active');
         if (modalTitle) modalTitle.textContent = 'Register New Account';
-        if (submitBtnText) submitBtnText.textContent = 'Register (+100 🏆) 🎁';
+        if (submitBtnText) submitBtnText.textContent = 'Done: Register (+100 🏆) 🎁';
+        if (regStepsBar) regStepsBar.classList.remove('hidden');
+        updateRegisterStepView(1);
       }
     };
 
     tabLogin?.addEventListener('click', () => setMode('login'));
     tabRegister?.addEventListener('click', () => setMode('register'));
 
+    // Step 1 Next Button Handler
+    if (regNextBtn) {
+      regNextBtn.addEventListener('click', () => {
+        const username = (usernameInput?.value || '').trim();
+        if (!username || username.length < 2) {
+          if (errorMsg) {
+            errorMsg.textContent = '⚠️ Please enter a valid Player ID / Username (at least 2 chars)!';
+            errorMsg.classList.remove('hidden');
+          }
+          return;
+        }
+        updateRegisterStepView(2);
+      });
+    }
+
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const usernameInput = document.getElementById('auth-username');
-        const passwordInput = document.getElementById('auth-password');
-        const username = usernameInput?.value || '';
+        const username = (usernameInput?.value || '').trim();
         const password = passwordInput?.value || '';
 
         if (errorMsg) errorMsg.classList.add('hidden');
@@ -313,6 +441,19 @@ export class AuthManager {
             }
           }
         } else {
+          // If in registration mode and on step 1, advance to step 2 first
+          if (this.regStep === 1) {
+            if (!username || username.length < 2) {
+              if (errorMsg) {
+                errorMsg.textContent = '⚠️ Please enter a valid Player ID / Username!';
+                errorMsg.classList.remove('hidden');
+              }
+              return;
+            }
+            updateRegisterStepView(2);
+            return;
+          }
+
           const res = await this.register(username, password);
           if (res && res.success) {
             if (successMsg) {

@@ -757,23 +757,34 @@
       <div class="modal-body">
         <!-- Auth Tabs -->
         <div class="auth-tabs">
-          <button type="button" id="tab-auth-login" class="auth-tab active">Login</button>
-          <button type="button" id="tab-auth-register" class="auth-tab">Register</button>
+          <button type="button" id="tab-auth-login" class="auth-tab active">🔑 Login</button>
+          <button type="button" id="tab-auth-register" class="auth-tab">✨ Register</button>
+        </div>
+
+        <!-- Registration Step Progress Bar -->
+        <div id="reg-steps-bar" class="reg-steps-bar hidden">
+          <div id="reg-step-1-chip" class="reg-step-chip active">1. Choose ID</div>
+          <span class="reg-step-arrow">➔</span>
+          <div id="reg-step-2-chip" class="reg-step-chip">2. Set Password</div>
         </div>
 
         <form id="form-auth" class="auth-form">
-          <div class="input-group">
-            <label for="auth-username">Unique Username</label>
-            <input type="text" id="auth-username" class="app-input" placeholder="Enter username..." required minlength="3" autocomplete="username">
+          <div id="group-auth-username" class="input-group">
+            <label for="auth-username" id="label-auth-username">Unique Username / Player ID</label>
+            <input type="text" id="auth-username" class="app-input" placeholder="e.g. Akhil or LordPlayer" required minlength="2" autocomplete="username">
           </div>
           
-          <div class="input-group">
-            <label for="auth-password">Password</label>
+          <div id="group-auth-password" class="input-group">
+            <label for="auth-password" id="label-auth-password">Secret Password</label>
             <input type="password" id="auth-password" class="app-input" placeholder="Enter password..." required minlength="3" autocomplete="current-password">
           </div>
 
           <div id="auth-error-msg" class="auth-error-badge hidden"></div>
           <div id="auth-success-msg" class="auth-success-badge hidden"></div>
+
+          <button type="button" id="btn-reg-next" class="app-btn btn-primary btn-full pulse-glow hidden" style="margin-top: 15px;">
+            <span>Next: Set Password ➔</span>
+          </button>
 
           <button type="submit" id="btn-auth-submit" class="app-btn btn-primary btn-full pulse-glow" style="margin-top: 15px;">
             <span id="btn-auth-text">Login Now 🚀</span>

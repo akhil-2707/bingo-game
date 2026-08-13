@@ -26,13 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // CINEMATIC GAME INTRO ANIMATION CONTROLLER
   // ==========================================
-  const gameIntroOverlay = document.getElementById('game-intro-overlay');
-  const btnSkipIntro = document.getElementById('btn-skip-intro');
-  const introLettersContainer = document.getElementById('intro-letters-container');
-  const introMascot = document.getElementById('intro-mascot');
-  const robotBeam = document.getElementById('robot-beam');
-  const tractorBeamsContainer = document.getElementById('tractor-beams-container');
-
   // Nickname Setup Modal Elements
   const modalNicknameSetup = document.getElementById('modal-nickname-setup');
   const startupPlayerName = document.getElementById('startup-player-name');
@@ -40,8 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const nameErrorMsg = document.getElementById('name-error-msg');
   const btnSaveNickname = document.getElementById('btn-save-nickname');
   const playerNickname = document.getElementById('player-nickname');
-
-  let introTimeouts = [];
 
   const openNicknameModal = () => {
     const savedName = localStorage.getItem('bingo_player_nickname');
@@ -56,59 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  const closeIntro = () => {
-    introTimeouts.forEach(t => clearTimeout(t));
-    if (gameIntroOverlay) {
-      gameIntroOverlay.classList.add('fade-out');
-      gameIntroOverlay.classList.add('hidden');
-      gameIntroOverlay.style.display = 'none';
-      openNicknameModal();
-    } else {
-      openNicknameModal();
-    }
-  };
-
-  if (btnSkipIntro) {
-    btnSkipIntro.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeIntro();
-    });
-  }
-
-  if (gameIntroOverlay) {
-    // Tap anywhere to skip intro
-    gameIntroOverlay.addEventListener('click', closeIntro);
-
-    // Hard Failsafe: Hide overlay after max 1.8 seconds NO MATTER WHAT
-    setTimeout(() => {
-      closeIntro();
-    }, 1800);
-
-    // Phase 1 (0.3s): Mascot appears & beams fire
-    introTimeouts.push(setTimeout(() => {
-      if (introMascot) introMascot.classList.remove('hidden');
-      if (robotBeam) robotBeam.classList.remove('hidden');
-      if (tractorBeamsContainer) tractorBeamsContainer.classList.remove('hidden');
-      try { sound.playWhoosh(); } catch (e) {}
-    }, 300));
-
-    // Phase 2 (0.7s): Letters join in center stage
-    introTimeouts.push(setTimeout(() => {
-      if (introLettersContainer) {
-        introLettersContainer.classList.remove('scattered');
-        introLettersContainer.classList.add('joined');
-      }
-      if (tractorBeamsContainer) tractorBeamsContainer.classList.add('contracting');
-      try { sound.playPop(); } catch (e) {}
-    }, 700));
-
-    // Phase 3 (1.5s): Auto close intro overlay to reveal main game
-    introTimeouts.push(setTimeout(() => {
-      closeIntro();
-    }, 1500));
-  } else {
-    openNicknameModal();
-  }
+  // Open Game Instantly
+  openNicknameModal();
 
   // DOM Elements
   const appRoot = document.getElementById('app-root');

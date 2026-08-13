@@ -176,6 +176,38 @@ export class AuthManager {
     profileModal.classList.remove('hidden');
   }
 
+  logout() {
+    this.saveUser(null);
+    this.updateHeaderProfileUI();
+  }
+
+  updateHeaderProfileUI() {
+    const nameEl = document.getElementById('header-user-name');
+    const trophiesEl = document.getElementById('header-user-trophies');
+    const avatarEl = document.getElementById('header-user-avatar');
+
+    if (this.currentUser) {
+      if (nameEl) nameEl.textContent = this.currentUser.username;
+      if (trophiesEl) trophiesEl.textContent = `🏆 ${this.currentUser.trophies || 100}`;
+      if (avatarEl) avatarEl.textContent = '👑';
+    } else {
+      if (nameEl) nameEl.textContent = 'Register / Login';
+      if (trophiesEl) trophiesEl.textContent = '🏆 100';
+      if (avatarEl) avatarEl.textContent = '🔐';
+    }
+  }
+
+  promptLoginIfGuest() {
+    if (!this.isLoggedIn()) {
+      const authModal = document.getElementById('modal-auth');
+      if (authModal) {
+        authModal.classList.remove('hidden');
+      }
+      return false;
+    }
+    return true;
+  }
+
   initUI(statsManager) {
     const authBtn = document.getElementById('btn-user-auth');
     const authModal = document.getElementById('modal-auth');
@@ -193,6 +225,13 @@ export class AuthManager {
     const successMsg = document.getElementById('auth-success-msg');
 
     this.updateHeaderProfileUI();
+
+    // Auto open Login / Register pop-up for guest players on first load
+    if (!this.isLoggedIn() && authModal) {
+      setTimeout(() => {
+        authModal.classList.remove('hidden');
+      }, 600);
+    }
 
     if (authBtn) {
       authBtn.addEventListener('click', () => {

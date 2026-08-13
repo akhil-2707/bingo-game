@@ -2529,11 +2529,12 @@ body {
 }
 
 .header-user-name {
-  max-width: 80px;
+  max-width: 130px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   color: #e2e8f0;
+  font-weight: 800;
 }
 
 .header-user-trophies {

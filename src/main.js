@@ -459,8 +459,34 @@ document.addEventListener('DOMContentLoaded', () => {
   
   btnResetBattle.addEventListener('click', () => {
     gridGame.init(selectOpponent.value);
+    gridGame.startGridSetupPhase(25);
     updateBoosterUI();
   });
+
+  const btnSetupShuffle = document.getElementById('btn-setup-shuffle');
+  const btnSetupManual = document.getElementById('btn-setup-manual');
+  const btnSetupReady = document.getElementById('btn-setup-ready');
+
+  if (btnSetupShuffle) {
+    btnSetupShuffle.addEventListener('click', () => {
+      gridGame.shuffleCurrentBoard();
+      showToast('🎲 Board Shuffled!');
+    });
+  }
+
+  if (btnSetupManual) {
+    btnSetupManual.addEventListener('click', () => {
+      gridGame.startManualFillMode();
+      showToast('✍️ Custom Fill Mode: Tap cells 1-25!');
+    });
+  }
+
+  if (btnSetupReady) {
+    btnSetupReady.addEventListener('click', () => {
+      gridGame.lockGridEarly();
+      showToast('🔒 Grid Locked & Ready!');
+    });
+  }
 
   const btnPowerupMagic = document.getElementById('btn-powerup-magic');
   const btnPowerupFreeze = document.getElementById('btn-powerup-freeze');
@@ -679,6 +705,9 @@ document.addEventListener('DOMContentLoaded', () => {
     oppName.textContent = 'Online Friend';
     oppAvatar.textContent = '👥';
     if (btnSwitchBoard) btnSwitchBoard.classList.add('hidden');
+
+    // Trigger 25s Grid Setup / Shuffle phase for room players
+    gridGame.startGridSetupPhase(25);
   };
 
   multiplayerManager.onMessageReceived = (data, senderPeerId) => {

@@ -33,9 +33,20 @@ export class GridBattleGame {
     this.isManualFillMode = false;
     this.nextManualNumber = 1;
     this.isDragging = false;
+
+    // Grid Setup / Shuffle 25s Phase State
+    this.isSetupPhase = false;
+    this.isGridLockedByPlayer = false;
+    this.setupSecondsRemaining = 25;
+    this.setupTimerInterval = null;
   }
 
   init(opponentType = 'ai-medium') {
+    if (this.setupTimerInterval) {
+      clearInterval(this.setupTimerInterval);
+      this.setupTimerInterval = null;
+    }
+
     this.opponentType = opponentType;
     this.currentTurn = 1;
     this.viewingPlayer = (this.opponentType === 'online' && !multiplayerManager.isHost) ? 2 : 1;
@@ -47,8 +58,13 @@ export class GridBattleGame {
     this.isGameOver = false;
     this.isManualFillMode = false;
     this.isTurnPending = false;
+    this.isSetupPhase = false;
+    this.isGridLockedByPlayer = false;
     this.nextManualNumber = 1;
     this.powerupUses = { magic: 1, freeze: 1, bomb: 1 };
+
+    const setupBar = document.getElementById('grid-setup-phase-bar');
+    if (setupBar) setupBar.classList.add('hidden');
 
     // Generate random 1-25 boards
     this.player1Board = this.generateShuffledBoard();
@@ -59,20 +75,110 @@ export class GridBattleGame {
     this.onTurnChange(this.currentTurn, this.opponentType, null, this.viewingPlayer);
   }
 
+  startGridSetupPhase(seconds = 25) {
+    if (this.setupTimerInterval) {
+      clearInterval(this.setupTimerInterval);
+      this.setupTimerInterval = null;
+    }
+
+    this.isSetupPhase = true;
+    this.isGridLockedByPlayer = false;
+    this.setupSecondsRemaining = seconds;
+
+    const setupBar = document.getElementById('grid-setup-phase-bar');
+    const timerDisplay = document.getElementById('setup-countdown-timer');
+    const btnReady = document.getElementById('btn-setup-ready');
+
+    if (setupBar) setupBar.classList.remove('hidden');
+    if (timerDisplay) timerDisplay.textContent = `${this.setupSecondsRemaining}s`;
+    if (btnReady) {
+      btnReady.innerHTML = '✅ Lock Grid';
+      btnReady.disabled = false;
+      btnReady.classList.add('pulse-glow');
+    }
+
+    this.renderBoard();
+
+    this.setupTimerInterval = setInterval(() => {
+      this.setupSecondsRemaining--;
+      if (timerDisplay) timerDisplay.textContent = `${this.setupSecondsRemaining}s`;
+
+      if (this.setupSecondsRemaining <= 5 && this.setupSecondsRemaining > 0) {
+        sound.playPop();
+      }
+
+      if (this.setupSecondsRemaining <= 0) {
+        this.finishGridSetupPhase();
+      }
+    }, 1000);
+  }
+
+  lockGridEarly() {
+    this.isGridLockedByPlayer = true;
+    const btnReady = document.getElementById('btn-setup-ready');
+    if (btnReady) {
+      btnReady.innerHTML = '🔒 Grid Locked!';
+      btnReady.disabled = true;
+      btnReady.classList.remove('pulse-glow');
+    }
+    this.renderBoard();
+    sound.playPop();
+  }
+
+  finishGridSetupPhase() {
+    if (this.setupTimerInterval) {
+      clearInterval(this.setupTimerInterval);
+      this.setupTimerInterval = null;
+    }
+
+    this.isSetupPhase = false;
+    this.isManualFillMode = false;
+
+    // Auto-fill any un-filled cells if manual custom fill was in progress
+    const activeBoard = this.viewingPlayer === 1 ? this.player1Board : this.player2Board;
+    const hasEmpty = activeBoard.some(n => n === null || n === undefined);
+    if (hasEmpty) {
+      const used = new Set(activeBoard.filter(n => n !== null && n !== undefined));
+      const remaining = Array.from({ length: 25 }, (_, i) => i + 1).filter(n => !used.has(n));
+      for (let i = remaining.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+      }
+      let rIdx = 0;
+      for (let i = 0; i < 25; i++) {
+        if (activeBoard[i] === null || activeBoard[i] === undefined) {
+          activeBoard[i] = remaining[rIdx++];
+        }
+      }
+    }
+
+    const setupBar = document.getElementById('grid-setup-phase-bar');
+    if (setupBar) setupBar.classList.add('hidden');
+
+    this.renderBoard();
+    sound.playLineChime();
+    this.onTurnChange(this.currentTurn, this.opponentType, null, this.viewingPlayer);
+  }
+
   startManualFillMode() {
-    if (this.calledNumbers.size > 0 || this.isGameOver) return;
+    if (this.calledNumbers.size > 0 || this.isGameOver || this.isGridLockedByPlayer) return;
     this.isManualFillMode = true;
     this.nextManualNumber = 1;
-    this.player1Board = new Array(25).fill(null);
+    if (this.viewingPlayer === 1) {
+      this.player1Board = new Array(25).fill(null);
+    } else {
+      this.player2Board = new Array(25).fill(null);
+    }
     this.renderBoard();
     sound.playPop();
   }
 
   fillCellManual(index) {
     if (!this.isManualFillMode || this.nextManualNumber > 25) return;
-    if (this.player1Board[index] !== null) return; // Already filled
+    const activeBoard = this.viewingPlayer === 1 ? this.player1Board : this.player2Board;
+    if (activeBoard[index] !== null) return; // Already filled
 
-    this.player1Board[index] = this.nextManualNumber;
+    activeBoard[index] = this.nextManualNumber;
     sound.playPop();
     sound.triggerHaptic();
 
@@ -100,7 +206,7 @@ export class GridBattleGame {
   }
 
   shuffleCurrentBoard() {
-    if (this.calledNumbers.size > 0 || this.isGameOver) return;
+    if (this.calledNumbers.size > 0 || this.isGameOver || this.isGridLockedByPlayer) return;
     this.isManualFillMode = false;
     if (this.viewingPlayer === 1) {
       this.player1Board = this.generateShuffledBoard();
@@ -126,7 +232,9 @@ export class GridBattleGame {
 
     // Turn Locking UI & Pointer Control
     let isLocked = false;
-    if (this.opponentType === 'online') {
+    if (this.isSetupPhase) {
+      isLocked = this.isGridLockedByPlayer;
+    } else if (this.opponentType === 'online') {
       const myTurnId = multiplayerManager.isHost ? 1 : 2;
       isLocked = (this.currentTurn !== myTurnId) || this.isTurnPending;
     } else if (this.opponentType.startsWith('ai')) {
@@ -207,6 +315,7 @@ export class GridBattleGame {
   }
 
   handleCellClick(number) {
+    if (this.isSetupPhase) return;
     if (this.isGameOver || this.calledNumbers.has(number) || this.isTurnPending) return;
 
     // Strict Online Multiplayer & AI Turn Validation:

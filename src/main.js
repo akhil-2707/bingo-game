@@ -147,20 +147,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const tractorBeamsContainer = document.getElementById('tractor-beams-container');
 
   if (gameIntroOverlay) {
-    // Phase 1 (0.8s): Robot Mascot drops into center with Whoosh sound
+    // Failsafe Timer: Guarantee intro overlay closes in max 3.2 seconds no matter what!
+    const failsafeTimer = setTimeout(() => {
+      closeIntro();
+    }, 3200);
+
+    // Tap anywhere on screen to close intro immediately
+    gameIntroOverlay.addEventListener('click', () => {
+      clearTimeout(failsafeTimer);
+      closeIntro();
+    });
+
+    // Phase 1 (0.5s): Mascot drops in
     introTimeouts.push(setTimeout(() => {
       if (introMascot) introMascot.classList.remove('hidden');
-      sound.playWhoosh();
-    }, 800));
+      try { sound.playWhoosh(); } catch (e) {}
+    }, 500));
 
-    // Phase 1.5 (1.4s): Robot fires plasma tractor energy beams
+    // Phase 1.5 (1.0s): Beams appear
     introTimeouts.push(setTimeout(() => {
       if (robotBeam) robotBeam.classList.remove('hidden');
       if (tractorBeamsContainer) tractorBeamsContainer.classList.remove('hidden');
-      sound.playPop();
-    }, 1400));
+      try { sound.playPop(); } catch (e) {}
+    }, 1000));
 
-    // Phase 2 (2.2s): Robot pulls all scattered B-I-N-G-O letters together & laser beams contract to 0px
+    // Phase 2 (1.6s): Letters join
     introTimeouts.push(setTimeout(() => {
       if (introLettersContainer) {
         introLettersContainer.classList.remove('scattered');
@@ -169,39 +180,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (tractorBeamsContainer) {
         tractorBeamsContainer.classList.add('contracting');
       }
-      sound.playPop();
-    }, 2200));
+      try { sound.playPop(); } catch (e) {}
+    }, 1600));
 
-    // Phase 2.5 (3.4s): Hide tractor beams once contracted
+    // Phase 3 (2.8s): Auto close intro overlay
     introTimeouts.push(setTimeout(() => {
-      if (tractorBeamsContainer) tractorBeamsContainer.classList.add('hidden');
-    }, 3400));
-
-    // Phase 3 (3.2s): B-I-N-G-O logo starts blinking rapidly like a bomb
-    introTimeouts.push(setTimeout(() => {
-      if (introLettersContainer) {
-        introLettersContainer.classList.add('ticking-bomb');
-      }
-      sound.playTickingBomb();
-    }, 3200));
-
-    // Phase 4 (4.3s): Bomb Explodes with Confetti & Flash
-    introTimeouts.push(setTimeout(() => {
-      if (introBombFlash) introBombFlash.classList.remove('hidden');
-      sound.playExplosion();
-      try {
-        confetti({
-          particleCount: 150,
-          spread: 90,
-          origin: { y: 0.5 }
-        });
-      } catch (e) {}
-    }, 4300));
-
-    // Phase 5 (4.9s): Fade out intro overlay to open game
-    introTimeouts.push(setTimeout(() => {
+      clearTimeout(failsafeTimer);
       closeIntro();
-    }, 4900));
+    }, 2800));
   } else {
     openNicknameModal();
   }

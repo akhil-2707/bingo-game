@@ -18,7 +18,9 @@ class SoundEngine {
       }
     }
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
+      try {
+        this.audioCtx.resume().catch(() => {});
+      } catch (e) {}
     }
   }
 

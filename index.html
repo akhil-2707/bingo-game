@@ -705,9 +705,23 @@
         </div>
 
         <div id="modal-host-actions" class="modal-actions">
+          <button id="btn-lobby-invite-friends" class="app-btn btn-secondary btn-full" style="margin-bottom: 8px;">
+            📩 Invite Online Friends
+          </button>
           <button id="btn-modal-start-game" class="app-btn btn-primary btn-large btn-full pulse-glow">
             🚀 START GAME NOW
           </button>
+        </div>
+
+        <!-- Drawer: Invite Friends to Room -->
+        <div id="drawer-lobby-invite" class="invite-drawer hidden">
+          <div class="drawer-header">
+            <span>📩 Invite Online Friends</span>
+            <button id="btn-close-invite-drawer" class="btn-text danger-text">&times;</button>
+          </div>
+          <div id="lobby-friends-invite-list" class="invite-friends-list">
+            <!-- Populated dynamically -->
+          </div>
         </div>
 
         <div id="modal-guest-waiting" class="guest-waiting-banner hidden">
@@ -823,6 +837,10 @@
               <span id="profile-avatar-icon">👑</span>
             </div>
             <h2 id="profile-display-username" class="glow-text">Username</h2>
+            <div class="player-id-badge-row">
+              <span class="player-id-chip">ID: <strong id="profile-display-id">#000000</strong></span>
+              <button id="btn-copy-player-id" class="btn-text btn-sm" title="Copy 6-Digit ID">📋 Copy</button>
+            </div>
             <span class="profile-badge-chip">🏆 <span id="profile-display-trophies">100</span> Trophies</span>
           </div>
 
@@ -845,10 +863,56 @@
             </div>
           </div>
 
-          <div class="profile-actions">
-            <button id="btn-profile-logout" class="app-btn btn-primary danger-btn btn-full" style="margin-top: 15px;">
+          <div class="profile-actions" style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
+            <button id="btn-open-friends" class="app-btn btn-secondary btn-full">
+              👥 Friends List & Search Players
+            </button>
+            <button id="btn-profile-logout" class="app-btn btn-primary danger-btn btn-full">
               🚪 Logout Account
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Friends List & Player Search Modal -->
+    <div id="modal-friends" class="modal-overlay hidden">
+      <div class="modal-content glass-card friends-modal-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-icon">👥</span>
+            <h3>Bingo Friends</h3>
+          </div>
+          <button class="btn-close-modal" id="btn-close-friends-modal">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="auth-tabs">
+            <button id="tab-friends-list" class="auth-tab active">My Friends</button>
+            <button id="tab-friends-search" class="auth-tab">Search Players</button>
+          </div>
+
+          <!-- Panel 1: My Friends -->
+          <div id="panel-friends-list" class="friends-panel">
+            <div id="my-friends-grid" class="friends-grid">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Panel 2: Search & Add Player -->
+          <div id="panel-friends-search" class="friends-panel hidden">
+            <form id="form-search-player" class="search-form">
+              <div class="input-group">
+                <label for="input-search-player">Search by 6-Digit ID or Username</label>
+                <div class="search-input-row">
+                  <input type="text" id="input-search-player" class="app-input" placeholder="e.g. 582910 or Akhil" required autocomplete="off">
+                  <button type="submit" class="app-btn btn-primary">🔍 Search</button>
+                </div>
+              </div>
+            </form>
+
+            <div id="search-status-msg" class="search-status-badge hidden"></div>
+            <div id="search-results-container" class="search-results-box" style="margin-top: 15px;"></div>
           </div>
         </div>
       </div>

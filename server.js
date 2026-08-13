@@ -61,11 +61,13 @@ const Room = mongoose.model('Room', roomSchema);
 
 // MongoDB Schema for Registered Players & Trophies
 const userSchema = new mongoose.Schema({
+  playerId: { type: String, required: true, unique: true },
   username: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
   trophies: { type: Number, default: 100 },
   wins: { type: Number, default: 0 },
   losses: { type: Number, default: 0 },
+  friends: [{ type: String }], // list of friend playerIds
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -74,6 +76,12 @@ const User = mongoose.model('User', userSchema);
 // Hybrid Storage: MongoDB with In-Memory fallback
 const memoryRooms = new Map();
 const memoryUsers = new Map();
+const onlineUsers = new Map(); // usernameLower -> { socketId, playerId, username, trophies }
+
+// Helper to generate a unique 6-digit Player ID
+function generate6DigitId() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 // Helper to update player trophies in DB & In-Memory
 async function adjustUserTrophies(username, delta) {
@@ -89,7 +97,7 @@ async function adjustUserTrophies(username, delta) {
         if (delta > 0) dbUser.wins += 1;
         if (delta < 0) dbUser.losses += 1;
         await dbUser.save();
-        return { username: dbUser.username, trophies: dbUser.trophies, wins: dbUser.wins, losses: dbUser.losses };
+        return { username: dbUser.username, playerId: dbUser.playerId, trophies: dbUser.trophies, wins: dbUser.wins, losses: dbUser.losses, friends: dbUser.friends || [] };
       }
     } catch (e) {
       console.error('Error updating DB trophies:', e);
@@ -99,7 +107,7 @@ async function adjustUserTrophies(username, delta) {
   // Memory Fallback
   let memUser = memoryUsers.get(cleanUser);
   if (!memUser) {
-    memUser = { username, trophies: 100, wins: 0, losses: 0 };
+    memUser = { username, playerId: generate6DigitId(), trophies: 100, wins: 0, losses: 0, friends: [] };
   }
   memUser.trophies = Math.max(0, memUser.trophies + delta);
   if (delta > 0) memUser.wins += 1;
@@ -121,22 +129,24 @@ app.post('/api/register', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Password must be at least 3 characters long!' });
   }
 
+  const playerId = generate6DigitId();
+
   try {
     if (isDbConnected && mongoose.connection.readyState === 1) {
       const existing = await User.findOne({ username: cleanNameLower });
       if (existing) {
         return res.status(400).json({ success: false, error: 'Username is already taken! Please log in.' });
       }
-      const newUser = new User({ username: cleanNameLower, password, trophies: 100 });
+      const newUser = new User({ username: cleanNameLower, password, playerId, trophies: 100, friends: [] });
       await newUser.save();
-      return res.json({ success: true, user: { username: cleanName, trophies: 100, wins: 0, losses: 0 } });
+      return res.json({ success: true, user: { username: cleanName, playerId: newUser.playerId, trophies: 100, wins: 0, losses: 0, friends: [] } });
     } else {
       if (memoryUsers.has(cleanNameLower)) {
         return res.status(400).json({ success: false, error: 'Username is already taken! Please log in.' });
       }
-      const memUser = { username: cleanName, password, trophies: 100, wins: 0, losses: 0 };
+      const memUser = { username: cleanName, password, playerId, trophies: 100, wins: 0, losses: 0, friends: [] };
       memoryUsers.set(cleanNameLower, memUser);
-      return res.json({ success: true, user: { username: cleanName, trophies: 100, wins: 0, losses: 0 } });
+      return res.json({ success: true, user: { username: cleanName, playerId, trophies: 100, wins: 0, losses: 0, friends: [] } });
     }
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Registration failed server-side' });
@@ -154,17 +164,22 @@ app.post('/api/login', async (req, res) => {
 
   try {
     if (isDbConnected && mongoose.connection.readyState === 1) {
-      const user = await User.findOne({ username: cleanNameLower });
+      let user = await User.findOne({ username: cleanNameLower });
       if (!user || user.password !== password) {
         return res.status(400).json({ success: false, error: 'Invalid username or password!' });
       }
-      return res.json({ success: true, user: { username: user.username, trophies: user.trophies, wins: user.wins, losses: user.losses } });
+      if (!user.playerId) {
+        user.playerId = generate6DigitId();
+        await user.save();
+      }
+      return res.json({ success: true, user: { username: user.username, playerId: user.playerId, trophies: user.trophies, wins: user.wins, losses: user.losses, friends: user.friends || [] } });
     } else {
-      const memUser = memoryUsers.get(cleanNameLower);
+      let memUser = memoryUsers.get(cleanNameLower);
       if (!memUser || memUser.password !== password) {
         return res.status(400).json({ success: false, error: 'Invalid username or password!' });
       }
-      return res.json({ success: true, user: { username: memUser.username, trophies: memUser.trophies, wins: memUser.wins, losses: memUser.losses } });
+      if (!memUser.playerId) memUser.playerId = generate6DigitId();
+      return res.json({ success: true, user: { username: memUser.username, playerId: memUser.playerId, trophies: memUser.trophies, wins: memUser.wins, losses: memUser.losses, friends: memUser.friends || [] } });
     }
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Login failed server-side' });
@@ -184,6 +199,15 @@ app.post('/api/trophies', async (req, res) => {
 io.on('connection', (socket) => {
   console.log(`🔌 Player connected: ${socket.id}`);
 
+  // Register online user presence
+  socket.on('user_online', ({ username, playerId }) => {
+    if (username) {
+      const cleanLower = username.trim().toLowerCase();
+      onlineUsers.set(cleanLower, { socketId: socket.id, playerId, username });
+      socket.usernameLower = cleanLower;
+    }
+  });
+
   // Socket Auth: Register
   socket.on('auth_register', async ({ username, password }, callback) => {
     const cleanName = (username || '').trim();
@@ -200,6 +224,8 @@ io.on('connection', (socket) => {
       return;
     }
 
+    const playerId = generate6DigitId();
+
     try {
       if (isDbConnected && mongoose.connection.readyState === 1) {
         const existing = await User.findOne({ username: cleanNameLower });
@@ -208,9 +234,11 @@ io.on('connection', (socket) => {
           if (typeof callback === 'function') callback(res);
           return;
         }
-        const newUser = new User({ username: cleanNameLower, password, trophies: 100 });
+        const newUser = new User({ username: cleanNameLower, password, playerId, trophies: 100, friends: [] });
         await newUser.save();
-        const res = { success: true, user: { username: cleanName, trophies: 100, wins: 0, losses: 0 } };
+        onlineUsers.set(cleanNameLower, { socketId: socket.id, playerId, username: cleanName });
+        socket.usernameLower = cleanNameLower;
+        const res = { success: true, user: { username: cleanName, playerId: newUser.playerId, trophies: 100, wins: 0, losses: 0, friends: [] } };
         if (typeof callback === 'function') callback(res);
       } else {
         if (memoryUsers.has(cleanNameLower)) {
@@ -218,9 +246,11 @@ io.on('connection', (socket) => {
           if (typeof callback === 'function') callback(res);
           return;
         }
-        const memUser = { username: cleanName, password, trophies: 100, wins: 0, losses: 0 };
+        const memUser = { username: cleanName, password, playerId, trophies: 100, wins: 0, losses: 0, friends: [] };
         memoryUsers.set(cleanNameLower, memUser);
-        const res = { success: true, user: { username: cleanName, trophies: 100, wins: 0, losses: 0 } };
+        onlineUsers.set(cleanNameLower, { socketId: socket.id, playerId, username: cleanName });
+        socket.usernameLower = cleanNameLower;
+        const res = { success: true, user: { username: cleanName, playerId, trophies: 100, wins: 0, losses: 0, friends: [] } };
         if (typeof callback === 'function') callback(res);
       }
     } catch (e) {
@@ -235,26 +265,161 @@ io.on('connection', (socket) => {
 
     try {
       if (isDbConnected && mongoose.connection.readyState === 1) {
-        const user = await User.findOne({ username: cleanNameLower });
+        let user = await User.findOne({ username: cleanNameLower });
         if (!user || user.password !== password) {
           const res = { success: false, error: 'Invalid username or password!' };
           if (typeof callback === 'function') callback(res);
           return;
         }
-        const res = { success: true, user: { username: user.username, trophies: user.trophies, wins: user.wins, losses: user.losses } };
+        if (!user.playerId) {
+          user.playerId = generate6DigitId();
+          await user.save();
+        }
+        onlineUsers.set(cleanNameLower, { socketId: socket.id, playerId: user.playerId, username: user.username });
+        socket.usernameLower = cleanNameLower;
+        const res = { success: true, user: { username: user.username, playerId: user.playerId, trophies: user.trophies, wins: user.wins, losses: user.losses, friends: user.friends || [] } };
         if (typeof callback === 'function') callback(res);
       } else {
-        const memUser = memoryUsers.get(cleanNameLower);
+        let memUser = memoryUsers.get(cleanNameLower);
         if (!memUser || memUser.password !== password) {
           const res = { success: false, error: 'Invalid username or password!' };
           if (typeof callback === 'function') callback(res);
           return;
         }
-        const res = { success: true, user: { username: memUser.username, trophies: memUser.trophies, wins: memUser.wins, losses: memUser.losses } };
+        if (!memUser.playerId) memUser.playerId = generate6DigitId();
+        onlineUsers.set(cleanNameLower, { socketId: socket.id, playerId: memUser.playerId, username: memUser.username });
+        socket.usernameLower = cleanNameLower;
+        const res = { success: true, user: { username: memUser.username, playerId: memUser.playerId, trophies: memUser.trophies, wins: memUser.wins, losses: memUser.losses, friends: memUser.friends || [] } };
         if (typeof callback === 'function') callback(res);
       }
     } catch (e) {
       if (typeof callback === 'function') callback({ success: false, error: 'Login error' });
+    }
+  });
+
+  // Search Player by Username or 6-Digit ID
+  socket.on('search_player', async ({ query }, callback) => {
+    const cleanQuery = (query || '').trim();
+    if (!cleanQuery) {
+      if (typeof callback === 'function') callback({ success: false, error: 'Please enter a Username or 6-Digit Player ID!' });
+      return;
+    }
+
+    const isDigitId = /^\d{6}$/.test(cleanQuery);
+    let foundPlayer = null;
+
+    if (isDbConnected && mongoose.connection.readyState === 1) {
+      try {
+        if (isDigitId) {
+          foundPlayer = await User.findOne({ playerId: cleanQuery });
+        } else {
+          foundPlayer = await User.findOne({ username: cleanQuery.toLowerCase() });
+        }
+      } catch (e) {}
+    }
+
+    if (!foundPlayer) {
+      memoryUsers.forEach(u => {
+        if (isDigitId && u.playerId === cleanQuery) foundPlayer = u;
+        else if (!isDigitId && u.username.toLowerCase() === cleanQuery.toLowerCase()) foundPlayer = u;
+      });
+    }
+
+    if (foundPlayer) {
+      const isOnline = onlineUsers.has(foundPlayer.username.toLowerCase());
+      const res = {
+        success: true,
+        player: {
+          username: foundPlayer.username,
+          playerId: foundPlayer.playerId,
+          trophies: foundPlayer.trophies || 100,
+          wins: foundPlayer.wins || 0,
+          isOnline
+        }
+      };
+      if (typeof callback === 'function') callback(res);
+    } else {
+      if (typeof callback === 'function') callback({ success: false, error: 'Player not found! Please check ID or Username.' });
+    }
+  });
+
+  // Add Friend
+  socket.on('add_friend', async ({ username, friendPlayerId }, callback) => {
+    if (!username || !friendPlayerId) return;
+    const cleanUser = username.trim().toLowerCase();
+
+    let userObj = null;
+    if (isDbConnected && mongoose.connection.readyState === 1) {
+      try {
+        userObj = await User.findOne({ username: cleanUser });
+        if (userObj) {
+          if (!userObj.friends.includes(friendPlayerId)) {
+            userObj.friends.push(friendPlayerId);
+            await userObj.save();
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!userObj && memoryUsers.has(cleanUser)) {
+      userObj = memoryUsers.get(cleanUser);
+      if (!userObj.friends) userObj.friends = [];
+      if (!userObj.friends.includes(friendPlayerId)) {
+        userObj.friends.push(friendPlayerId);
+      }
+    }
+
+    const updatedFriends = userObj ? (userObj.friends || []) : [];
+    if (typeof callback === 'function') callback({ success: true, friends: updatedFriends });
+  });
+
+  // Get Friends List with Online Status
+  socket.on('get_friends_list', async ({ username, friendIds }, callback) => {
+    const list = [];
+    const ids = friendIds || [];
+
+    for (const fId of ids) {
+      let fUser = null;
+      if (isDbConnected && mongoose.connection.readyState === 1) {
+        try {
+          fUser = await User.findOne({ playerId: fId });
+        } catch (e) {}
+      }
+      if (!fUser) {
+        memoryUsers.forEach(u => {
+          if (u.playerId === fId) fUser = u;
+        });
+      }
+
+      if (fUser) {
+        const isOnline = onlineUsers.has(fUser.username.toLowerCase());
+        list.push({
+          username: fUser.username,
+          playerId: fUser.playerId,
+          trophies: fUser.trophies || 100,
+          isOnline
+        });
+      }
+    }
+
+    if (typeof callback === 'function') callback({ success: true, friends: list });
+  });
+
+  // Send In-Game Room Invite to Online Friend
+  socket.on('send_room_invite', ({ fromUsername, targetUsername, roomCode, mode }, callback) => {
+    if (!targetUsername || !roomCode) return;
+    const targetClean = targetUsername.trim().toLowerCase();
+
+    if (onlineUsers.has(targetClean)) {
+      const targetUser = onlineUsers.get(targetClean);
+      io.to(targetUser.socketId).emit('room_invite_received', {
+        fromUsername,
+        roomCode,
+        mode: mode || '5x5 Grid Battle'
+      });
+      if (typeof callback === 'function') callback({ success: true, message: `Invite sent to ${targetUsername}!` });
+    } else {
+      if (typeof callback === 'function') callback({ success: false, error: `${targetUsername} is currently offline.` });
     }
   });
 
@@ -439,6 +604,9 @@ io.on('connection', (socket) => {
   // Disconnect
   socket.on('disconnect', () => {
     console.log(`❌ Player disconnected: ${socket.id}`);
+    if (socket.usernameLower) {
+      onlineUsers.delete(socket.usernameLower);
+    }
     memoryRooms.forEach((room, roomCode) => {
       const pIndex = room.players.findIndex(p => p.socketId === socket.id);
       if (pIndex !== -1) {

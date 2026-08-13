@@ -7,6 +7,7 @@ import { CustomBingoBuilder } from './customBingo.js';
 import { statsManager } from './stats.js';
 import { multiplayerManager } from './multiplayer.js';
 import { authManager } from './auth.js';
+import { FriendsManager } from './friends.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize Lucide Icons
@@ -17,6 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (multiplayerManager.socket) {
     authManager.setSocket(multiplayerManager.socket);
   }
+
+  // Initialize Friends System & Game Invites
+  const friendsManager = new FriendsManager(authManager, multiplayerManager);
+  friendsManager.init();
 
   // ==========================================
   // CINEMATIC GAME INTRO ANIMATION CONTROLLER

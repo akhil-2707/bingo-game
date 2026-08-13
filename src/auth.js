@@ -40,6 +40,22 @@ export class AuthManager {
   setSocket(socket) {
     this.socket = socket;
     if (this.socket) {
+      if (this.currentUser) {
+        this.socket.emit('user_online', {
+          username: this.currentUser.username,
+          playerId: this.currentUser.playerId
+        });
+      }
+
+      this.socket.on('connect', () => {
+        if (this.currentUser) {
+          this.socket.emit('user_online', {
+            username: this.currentUser.username,
+            playerId: this.currentUser.playerId
+          });
+        }
+      });
+
       this.socket.on('trophies_updated', (updatedUser) => {
         if (this.currentUser && updatedUser.username.toLowerCase() === this.currentUser.username.toLowerCase()) {
           this.currentUser.trophies = updatedUser.trophies;
@@ -51,144 +67,8 @@ export class AuthManager {
     }
   }
 
-  isLoggedIn() {
-    return !!this.currentUser;
-  }
-
-  getUsername() {
-    return this.currentUser ? this.currentUser.username : 'Guest';
-  }
-
-  getTrophies() {
-    return this.currentUser ? (this.currentUser.trophies || 100) : 100;
-  }
-
-  async register(username, password) {
-    // Try Socket first if connected
-    if (this.socket && this.socket.connected) {
-      return new Promise((resolve) => {
-        this.socket.emit('auth_register', { username, password }, (res) => {
-          if (res && res.success) {
-            this.saveUser(res.user);
-          }
-          resolve(res);
-        });
-      });
-    }
-
-    // REST fallback
-    try {
-      const response = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const data = await response.json();
-      if (data.success) {
-        this.saveUser(data.user);
-      }
-      return data;
-    } catch (err) {
-      return { success: false, error: 'Network error connecting to server' };
-    }
-  }
-
-  async login(username, password) {
-    if (this.socket && this.socket.connected) {
-      return new Promise((resolve) => {
-        this.socket.emit('auth_login', { username, password }, (res) => {
-          if (res && res.success) {
-            this.saveUser(res.user);
-          }
-          resolve(res);
-        });
-      });
-    }
-
-    try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const data = await response.json();
-      if (data.success) {
-        this.saveUser(data.user);
-      }
-      return data;
-    } catch (err) {
-      return { success: false, error: 'Network error connecting to server' };
-    }
-  }
-
-  async updateTrophies(delta, matchType = '') {
-    if (!this.currentUser) return;
-    const username = this.currentUser.username;
-
-    // Local optimistic update
-    this.currentUser.trophies = Math.max(0, (this.currentUser.trophies || 100) + delta);
-    this.saveUser(this.currentUser);
-
-    // Show trophy animation floating text
-    this.showTrophyToast(delta);
-
-    // Sync with server
-    if (this.socket && this.socket.connected) {
-      this.socket.emit('update_trophies', { username, delta });
-    } else {
-      try {
-        await fetch('/api/trophies', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, delta })
-        });
-      } catch (e) {}
-    }
-  }
-
-  showTrophyToast(delta) {
-    const isPositive = delta >= 0;
-    const toast = document.createElement('div');
-    toast.className = `trophy-toast ${isPositive ? 'gain' : 'loss'}`;
-    toast.innerHTML = `${isPositive ? '+' + delta : delta} 🏆`;
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-      toast.classList.add('animate-out');
-      setTimeout(() => toast.remove(), 600);
-    }, 1800);
-  }
-
-  logout() {
-    this.saveUser(null);
-    this.updateHeaderProfileUI();
-  }
-
-  updateHeaderProfileUI() {
-    const nameEl = document.getElementById('header-user-name');
-    const trophiesEl = document.getElementById('header-user-trophies');
-    const avatarEl = document.getElementById('header-user-avatar');
-
-    if (this.currentUser) {
-      if (nameEl) nameEl.textContent = this.currentUser.username;
-      if (trophiesEl) trophiesEl.textContent = `🏆 ${this.currentUser.trophies || 100}`;
-      if (avatarEl) avatarEl.textContent = '👑';
-    } else {
-      if (nameEl) nameEl.textContent = 'Login';
-      if (trophiesEl) trophiesEl.textContent = '🏆 100';
-      if (avatarEl) avatarEl.textContent = '👤';
-    }
-  }
-
-  promptLoginIfGuest() {
-    if (!this.isLoggedIn()) {
-      const authModal = document.getElementById('modal-auth');
-      if (authModal) {
-        authModal.classList.remove('hidden');
-      }
-      return false;
-    }
-    return true;
+  getPlayerId() {
+    return this.currentUser ? (this.currentUser.playerId || '000000') : '000000';
   }
 
   openProfileModal(statsManager) {
@@ -196,14 +76,26 @@ export class AuthManager {
     if (!profileModal || !this.currentUser) return;
 
     const displayUsername = document.getElementById('profile-display-username');
+    const displayPlayerId = document.getElementById('profile-display-id');
     const displayTrophies = document.getElementById('profile-display-trophies');
     const statMatches = document.getElementById('profile-stat-matches');
     const statWins = document.getElementById('profile-stat-wins');
     const statLosses = document.getElementById('profile-stat-losses');
     const statWinrate = document.getElementById('profile-stat-winrate');
+    const btnCopyPlayerId = document.getElementById('btn-copy-player-id');
 
     if (displayUsername) displayUsername.textContent = this.currentUser.username;
+    if (displayPlayerId) displayPlayerId.textContent = `#${this.getPlayerId()}`;
     if (displayTrophies) displayTrophies.textContent = this.currentUser.trophies || 100;
+
+    if (btnCopyPlayerId) {
+      btnCopyPlayerId.onclick = () => {
+        const idStr = this.getPlayerId();
+        navigator.clipboard.writeText(idStr).then(() => {
+          alert(`📋 Player ID #${idStr} copied to clipboard! Share with friends.`);
+        });
+      };
+    }
 
     const wins = this.currentUser.wins || (statsManager ? statsManager.data.victories : 0);
     const losses = this.currentUser.losses || (statsManager ? (statsManager.data.totalGames - statsManager.data.victories) : 0);

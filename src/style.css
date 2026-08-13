@@ -2765,3 +2765,212 @@ body {
 .danger-btn:hover {
   box-shadow: 0 0 25px rgba(225, 29, 72, 0.6) !important;
 }
+
+/* 6-Digit Player ID & Friends System Styles */
+.player-id-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.player-id-chip {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ios-indigo);
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.friends-modal-card {
+  max-width: 440px !important;
+  width: 92%;
+}
+
+.search-input-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.search-input-row input {
+  flex: 1;
+}
+
+.friends-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.friend-card, .player-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.p-card-left, .f-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.p-card-avatar, .f-avatar {
+  font-size: 24px;
+}
+
+.f-name-group, .p-card-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.f-name, .p-card-name {
+  font-weight: 800;
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.f-id, .p-card-id {
+  font-size: 11px;
+  color: var(--ios-gold);
+}
+
+.f-status-pill {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.f-status-pill.online {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.f-status-pill.offline {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.empty-state-badge {
+  text-align: center;
+  font-size: 12px;
+  color: #94a3b8;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.empty-state-badge.error {
+  color: var(--ios-pink);
+  border-color: rgba(244, 63, 94, 0.4);
+}
+
+/* Lobby Friends Invite Drawer */
+.invite-drawer {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--ios-indigo);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 10px;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--ios-gold);
+  margin-bottom: 10px;
+}
+
+.invite-friends-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.invite-friend-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(30, 41, 59, 0.8);
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+/* Incoming Room Invite Banner Overlay */
+.room-invite-toast-overlay {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999999;
+  width: 90%;
+  max-width: 400px;
+  animation: inviteBannerIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.invite-banner-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98));
+  border: 2px solid var(--ios-gold);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.invite-banner-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.invite-icon {
+  font-size: 24px;
+}
+
+.invite-title-text {
+  font-size: 14px;
+  color: #ffffff;
+  text-align: left;
+}
+
+.invite-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--ios-gold);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.invite-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+@keyframes inviteBannerIn {
+  0% { opacity: 0; transform: translate(-50%, -40px) scale(0.8); }
+  100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}

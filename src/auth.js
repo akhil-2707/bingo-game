@@ -71,6 +71,54 @@ export class AuthManager {
     return this.currentUser ? (this.currentUser.playerId || '000000') : '000000';
   }
 
+  async updateTrophies(delta, modeName = '5x5 Battle') {
+    if (!this.currentUser) return;
+    const username = this.currentUser.username;
+
+    // Local optimistic update
+    this.currentUser.trophies = Math.max(0, (this.currentUser.trophies || 100) + delta);
+    if (!this.currentUser.matchHistory) this.currentUser.matchHistory = [];
+    this.currentUser.matchHistory.unshift({
+      mode: modeName,
+      result: delta >= 0 ? 'WIN' : 'LOSS',
+      delta,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+    if (this.currentUser.matchHistory.length > 10) {
+      this.currentUser.matchHistory = this.currentUser.matchHistory.slice(0, 10);
+    }
+    this.saveUser(this.currentUser);
+
+    // Show trophy animation floating text
+    this.showTrophyToast(delta);
+
+    // Sync with server
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('update_trophies', { username, delta, modeName });
+    } else {
+      try {
+        await fetch('/api/trophies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, delta, modeName })
+        });
+      } catch (e) {}
+    }
+  }
+
+  showTrophyToast(delta) {
+    const isPositive = delta >= 0;
+    const toast = document.createElement('div');
+    toast.className = `trophy-toast ${isPositive ? 'gain' : 'loss'}`;
+    toast.innerHTML = `${isPositive ? '+' + delta : delta} 🏆`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add('animate-out');
+      setTimeout(() => toast.remove(), 600);
+    }, 1800);
+  }
+
   openProfileModal(statsManager) {
     const profileModal = document.getElementById('modal-player-profile');
     if (!profileModal || !this.currentUser) return;
@@ -83,6 +131,7 @@ export class AuthManager {
     const statLosses = document.getElementById('profile-stat-losses');
     const statWinrate = document.getElementById('profile-stat-winrate');
     const btnCopyPlayerId = document.getElementById('btn-copy-player-id');
+    const historyContainer = document.getElementById('profile-match-history-list');
 
     if (displayUsername) displayUsername.textContent = this.currentUser.username;
     if (displayPlayerId) displayPlayerId.textContent = `#${this.getPlayerId()}`;
@@ -106,6 +155,23 @@ export class AuthManager {
     if (statWins) statWins.textContent = wins;
     if (statLosses) statLosses.textContent = Math.max(0, losses);
     if (statWinrate) statWinrate.textContent = `${winrate}%`;
+
+    // Render Recent Match History
+    if (historyContainer) {
+      const history = this.currentUser.matchHistory || [];
+      if (history.length === 0) {
+        historyContainer.innerHTML = `<div class="empty-state-badge">📜 No recent matches played yet. Play a game to record history!</div>`;
+      } else {
+        historyContainer.innerHTML = history.map(item => `
+          <div class="history-item-row ${item.result.toLowerCase()}">
+            <span class="h-badge">${item.result === 'WIN' ? '🟢 WIN' : '🔴 LOSS'}</span>
+            <span class="h-mode">${item.mode || '5x5 Battle'}</span>
+            <span class="h-delta">${item.delta >= 0 ? '+' + item.delta : item.delta} 🏆</span>
+            <span class="h-time">${item.time || ''}</span>
+          </div>
+        `).join('');
+      }
+    }
 
     profileModal.classList.remove('hidden');
   }

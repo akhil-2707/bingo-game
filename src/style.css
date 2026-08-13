@@ -2974,3 +2974,68 @@ body {
   0% { opacity: 0; transform: translate(-50%, -40px) scale(0.8); }
   100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
 }
+
+/* Match History Log Styles in Profile */
+.profile-history-section {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.history-section-title {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ios-gold);
+  text-transform: uppercase;
+}
+
+.match-history-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.history-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: rgba(15, 23, 42, 0.7);
+  border-left: 4px solid #94a3b8;
+}
+
+.history-item-row.win {
+  border-left-color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.history-item-row.loss {
+  border-left-color: #f43f5e;
+  background: rgba(244, 63, 94, 0.1);
+}
+
+.h-badge {
+  font-weight: 800;
+}
+
+.h-mode {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.h-delta {
+  font-weight: 800;
+  color: var(--ios-gold);
+}
+
+.h-time {
+  font-size: 10px;
+  color: #94a3b8;
+}

@@ -68,6 +68,12 @@ const userSchema = new mongoose.Schema({
   wins: { type: Number, default: 0 },
   losses: { type: Number, default: 0 },
   friends: [{ type: String }], // list of friend playerIds
+  matchHistory: [{
+    mode: { type: String, default: '5x5 Battle' },
+    result: { type: String, default: 'WIN' },
+    delta: { type: Number, default: 5 },
+    time: { type: String }
+  }],
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -84,9 +90,16 @@ function generate6DigitId() {
 }
 
 // Helper to update player trophies in DB & In-Memory
-async function adjustUserTrophies(username, delta) {
+async function adjustUserTrophies(username, delta, modeName = '5x5 Battle') {
   if (!username) return null;
   const cleanUser = username.trim().toLowerCase();
+  const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const newMatchItem = {
+    mode: modeName,
+    result: delta >= 0 ? 'WIN' : 'LOSS',
+    delta: delta,
+    time: timeStr
+  };
 
   // Try DB
   if (isDbConnected && mongoose.connection.readyState === 1) {
@@ -96,8 +109,11 @@ async function adjustUserTrophies(username, delta) {
         dbUser.trophies = Math.max(0, dbUser.trophies + delta);
         if (delta > 0) dbUser.wins += 1;
         if (delta < 0) dbUser.losses += 1;
+        if (!dbUser.matchHistory) dbUser.matchHistory = [];
+        dbUser.matchHistory.unshift(newMatchItem);
+        if (dbUser.matchHistory.length > 10) dbUser.matchHistory = dbUser.matchHistory.slice(0, 10);
         await dbUser.save();
-        return { username: dbUser.username, playerId: dbUser.playerId, trophies: dbUser.trophies, wins: dbUser.wins, losses: dbUser.losses, friends: dbUser.friends || [] };
+        return { username: dbUser.username, playerId: dbUser.playerId, trophies: dbUser.trophies, wins: dbUser.wins, losses: dbUser.losses, friends: dbUser.friends || [], matchHistory: dbUser.matchHistory };
       }
     } catch (e) {
       console.error('Error updating DB trophies:', e);
@@ -107,11 +123,14 @@ async function adjustUserTrophies(username, delta) {
   // Memory Fallback
   let memUser = memoryUsers.get(cleanUser);
   if (!memUser) {
-    memUser = { username, playerId: generate6DigitId(), trophies: 100, wins: 0, losses: 0, friends: [] };
+    memUser = { username, playerId: generate6DigitId(), trophies: 100, wins: 0, losses: 0, friends: [], matchHistory: [] };
   }
   memUser.trophies = Math.max(0, memUser.trophies + delta);
   if (delta > 0) memUser.wins += 1;
   if (delta < 0) memUser.losses += 1;
+  if (!memUser.matchHistory) memUser.matchHistory = [];
+  memUser.matchHistory.unshift(newMatchItem);
+  if (memUser.matchHistory.length > 10) memUser.matchHistory = memUser.matchHistory.slice(0, 10);
   memoryUsers.set(cleanUser, memUser);
   return memUser;
 }
@@ -424,8 +443,8 @@ io.on('connection', (socket) => {
   });
 
   // Socket Event: Update Trophies (+5 / -5 / +1)
-  socket.on('update_trophies', async ({ username, delta }, callback) => {
-    const updated = await adjustUserTrophies(username, delta);
+  socket.on('update_trophies', async ({ username, delta, modeName }, callback) => {
+    const updated = await adjustUserTrophies(username, delta, modeName);
     if (updated) {
       socket.emit('trophies_updated', updated);
       if (typeof callback === 'function') callback({ success: true, user: updated });

@@ -2603,6 +2603,12 @@ body {
   text-transform: uppercase;
 }
 
+.auth-error-badge:empty,
+.auth-success-badge:empty,
+.search-status-badge:empty {
+  display: none !important;
+}
+
 .auth-error-badge {
   font-size: 12px;
   font-weight: 700;
@@ -2612,6 +2618,7 @@ body {
   padding: 8px 12px;
   border-radius: 8px;
   text-align: center;
+  margin-top: 8px;
 }
 
 .auth-success-badge {
@@ -2623,6 +2630,7 @@ body {
   padding: 8px 12px;
   border-radius: 8px;
   text-align: center;
+  margin-top: 8px;
 }
 
 .auth-footer-info {

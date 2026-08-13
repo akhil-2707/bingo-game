@@ -26,6 +26,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // CINEMATIC GAME INTRO ANIMATION CONTROLLER
   // ==========================================
+  const gameIntroOverlay = document.getElementById('game-intro-overlay');
+  const btnSkipIntro = document.getElementById('btn-skip-intro');
+  const introLettersContainer = document.getElementById('intro-letters-container');
+  const introMascot = document.getElementById('intro-mascot');
+  const robotBeam = document.getElementById('robot-beam');
+  const tractorBeamsContainer = document.getElementById('tractor-beams-container');
+
   // Nickname Setup Modal Elements
   const modalNicknameSetup = document.getElementById('modal-nickname-setup');
   const startupPlayerName = document.getElementById('startup-player-name');
@@ -33,6 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const nameErrorMsg = document.getElementById('name-error-msg');
   const btnSaveNickname = document.getElementById('btn-save-nickname');
   const playerNickname = document.getElementById('player-nickname');
+
+  let introTimeouts = [];
 
   const openNicknameModal = () => {
     const savedName = localStorage.getItem('bingo_player_nickname');
@@ -47,8 +56,60 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Open Game Instantly
-  openNicknameModal();
+  const closeIntro = () => {
+    introTimeouts.forEach(t => clearTimeout(t));
+    if (gameIntroOverlay) {
+      gameIntroOverlay.classList.add('fade-out');
+      setTimeout(() => {
+        gameIntroOverlay.classList.add('hidden');
+        openNicknameModal();
+      }, 400);
+    } else {
+      openNicknameModal();
+    }
+  };
+
+  if (btnSkipIntro) {
+    btnSkipIntro.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeIntro();
+    });
+  }
+
+  if (gameIntroOverlay) {
+    // Tap anywhere to skip intro
+    gameIntroOverlay.addEventListener('click', closeIntro);
+
+    // Phase 1 (0.4s): Mascot appears
+    introTimeouts.push(setTimeout(() => {
+      if (introMascot) introMascot.classList.remove('hidden');
+      try { sound.playWhoosh(); } catch (e) {}
+    }, 400));
+
+    // Phase 1.5 (0.8s): Energy beams
+    introTimeouts.push(setTimeout(() => {
+      if (robotBeam) robotBeam.classList.remove('hidden');
+      if (tractorBeamsContainer) tractorBeamsContainer.classList.remove('hidden');
+      try { sound.playPop(); } catch (e) {}
+    }, 800));
+
+    // Phase 2 (1.4s): Letters join
+    introTimeouts.push(setTimeout(() => {
+      if (introLettersContainer) {
+        introLettersContainer.classList.remove('scattered');
+        introLettersContainer.classList.add('joined');
+      }
+      if (tractorBeamsContainer) tractorBeamsContainer.classList.add('contracting');
+      try { sound.playPop(); } catch (e) {}
+    }, 1400));
+
+    // Phase 3 (2.5s): Auto close intro and reveal game
+    introTimeouts.push(setTimeout(() => {
+      closeIntro();
+    }, 2500));
+  } else {
+    openNicknameModal();
+  }
 
   // DOM Elements
   const appRoot = document.getElementById('app-root');

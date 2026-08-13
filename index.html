@@ -740,159 +740,159 @@
       </div>
     </div>
 
-    <!-- User Registration & Login Modal -->
-    <div id="modal-auth" class="modal-overlay hidden">
-      <div class="modal-content glass-card auth-modal-card">
-        <div class="modal-header">
-          <div class="modal-title-group">
-            <span class="modal-icon">🔐</span>
-            <h3 id="auth-modal-title">Player Account</h3>
-          </div>
-          <button class="btn-close-modal" id="btn-close-auth-modal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <!-- Auth Tabs -->
-          <div class="auth-tabs">
-            <button type="button" id="tab-auth-login" class="auth-tab active">Login</button>
-            <button type="button" id="tab-auth-register" class="auth-tab">Register</button>
-          </div>
-
-          <form id="form-auth" class="auth-form">
-            <div class="input-group">
-              <label for="auth-username">Unique Username</label>
-              <input type="text" id="auth-username" class="app-input" placeholder="Enter username..." required minlength="3" autocomplete="username">
-            </div>
-            
-            <div class="input-group">
-              <label for="auth-password">Password</label>
-              <input type="password" id="auth-password" class="app-input" placeholder="Enter password..." required minlength="3" autocomplete="current-password">
-            </div>
-
-            <div id="auth-error-msg" class="auth-error-badge hidden"></div>
-            <div id="auth-success-msg" class="auth-success-badge hidden"></div>
-
-            <button type="submit" id="btn-auth-submit" class="app-btn btn-primary btn-full pulse-glow" style="margin-top: 15px;">
-              <span id="btn-auth-text">Login Now 🚀</span>
-            </button>
-          </form>
-          
-          <div class="auth-footer-info">
-            <p>✨ <strong>New Players:</strong> Get <strong>100 Trophies 🏆</strong> on registration!</p>
-            <p>⚔️ <strong>Multiplayer Match:</strong> Win (+5 🏆) | Loss (-5 🏆)</p>
-            <p>🤖 <strong>Bot Match Win:</strong> (+1 🏆)</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Detailed Player Profile Modal -->
-    <div id="modal-player-profile" class="modal-overlay hidden">
-      <div class="modal-content glass-card profile-modal-card">
-        <div class="modal-header">
-          <div class="modal-title-group">
-            <span class="modal-icon">👤</span>
-            <h3>Player Profile</h3>
-          </div>
-          <button class="btn-close-modal" id="btn-close-profile-modal">&times;</button>
-        </div>
-        
-        <div class="modal-body profile-body">
-          <div class="profile-hero">
-            <div class="profile-avatar-circle">
-              <span id="profile-avatar-icon">👑</span>
-            </div>
-            <h2 id="profile-display-username" class="glow-text">Username</h2>
-            <div class="player-id-badge-row">
-              <span class="player-id-chip">ID: <strong id="profile-display-id">#000000</strong></span>
-              <button id="btn-copy-player-id" class="btn-text btn-sm" title="Copy 6-Digit ID">📋 Copy</button>
-            </div>
-            <span class="profile-badge-chip">🏆 <span id="profile-display-trophies">100</span> Trophies</span>
-          </div>
-
-          <div class="profile-stats-grid">
-            <div class="prof-stat-card">
-              <span class="prof-val" id="profile-stat-matches">0</span>
-              <span class="prof-lbl">Matches</span>
-            </div>
-            <div class="prof-stat-card">
-              <span class="prof-val" id="profile-stat-wins">0</span>
-              <span class="prof-lbl">Wins</span>
-            </div>
-            <div class="prof-stat-card">
-              <span class="prof-val" id="profile-stat-losses">0</span>
-              <span class="prof-lbl">Losses</span>
-            </div>
-            <div class="prof-stat-card">
-              <span class="prof-val" id="profile-stat-winrate">0%</span>
-              <span class="prof-lbl">Win Rate</span>
-            </div>
-          </div>
-
-          <!-- Recent Match History Section -->
-          <div class="profile-history-section">
-            <div class="history-section-title">📜 Recent Match History</div>
-            <div id="profile-match-history-list" class="match-history-grid">
-              <!-- Dynamic match items -->
-            </div>
-          </div>
-
-          <div class="profile-actions" style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-            <button id="btn-open-friends" class="app-btn btn-secondary btn-full">
-              👥 Friends List & Search Players
-            </button>
-            <button id="btn-profile-logout" class="app-btn btn-primary danger-btn btn-full">
-              🚪 Logout Account
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Friends List & Player Search Modal -->
-    <div id="modal-friends" class="modal-overlay hidden">
-      <div class="modal-content glass-card friends-modal-card">
-        <div class="modal-header">
-          <div class="modal-title-group">
-            <span class="modal-icon">👥</span>
-            <h3>Bingo Friends</h3>
-          </div>
-          <button class="btn-close-modal" id="btn-close-friends-modal">&times;</button>
-        </div>
-
-        <div class="modal-body">
-          <div class="auth-tabs">
-            <button id="tab-friends-list" class="auth-tab active">My Friends</button>
-            <button id="tab-friends-search" class="auth-tab">Search Players</button>
-          </div>
-
-          <!-- Panel 1: My Friends -->
-          <div id="panel-friends-list" class="friends-panel">
-            <div id="my-friends-grid" class="friends-grid">
-              <!-- Populated dynamically -->
-            </div>
-          </div>
-
-          <!-- Panel 2: Search & Add Player -->
-          <div id="panel-friends-search" class="friends-panel hidden">
-            <form id="form-search-player" class="search-form">
-              <div class="input-group">
-                <label for="input-search-player">Search by 6-Digit ID or Username</label>
-                <div class="search-input-row">
-                  <input type="text" id="input-search-player" class="app-input" placeholder="e.g. 582910 or Akhil" required autocomplete="off">
-                  <button type="submit" class="app-btn btn-primary">🔍 Search</button>
-                </div>
-              </div>
-            </form>
-
-            <div id="search-status-msg" class="search-status-badge hidden"></div>
-            <div id="search-results-container" class="search-results-box" style="margin-top: 15px;"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- iOS Home Bar Indicator -->
     <div class="ios-home-indicator"></div>
+  </div> <!-- End #app-root -->
+
+  <!-- User Registration & Login Modal (Floating Root Overlay) -->
+  <div id="modal-auth" class="modal-overlay hidden">
+    <div class="modal-content glass-card auth-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">🔐</span>
+          <h3 id="auth-modal-title">Player Account</h3>
+        </div>
+        <button class="btn-close-modal" id="btn-close-auth-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Auth Tabs -->
+        <div class="auth-tabs">
+          <button type="button" id="tab-auth-login" class="auth-tab active">Login</button>
+          <button type="button" id="tab-auth-register" class="auth-tab">Register</button>
+        </div>
+
+        <form id="form-auth" class="auth-form">
+          <div class="input-group">
+            <label for="auth-username">Unique Username</label>
+            <input type="text" id="auth-username" class="app-input" placeholder="Enter username..." required minlength="3" autocomplete="username">
+          </div>
+          
+          <div class="input-group">
+            <label for="auth-password">Password</label>
+            <input type="password" id="auth-password" class="app-input" placeholder="Enter password..." required minlength="3" autocomplete="current-password">
+          </div>
+
+          <div id="auth-error-msg" class="auth-error-badge hidden"></div>
+          <div id="auth-success-msg" class="auth-success-badge hidden"></div>
+
+          <button type="submit" id="btn-auth-submit" class="app-btn btn-primary btn-full pulse-glow" style="margin-top: 15px;">
+            <span id="btn-auth-text">Login Now 🚀</span>
+          </button>
+        </form>
+        
+        <div class="auth-footer-info">
+          <p>✨ <strong>New Players:</strong> Get <strong>100 Trophies 🏆</strong> on registration!</p>
+          <p>⚔️ <strong>Multiplayer Match:</strong> Win (+5 🏆) | Loss (-5 🏆)</p>
+          <p>🤖 <strong>Bot Match Win:</strong> (+1 🏆)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed Player Profile Modal (Floating Root Overlay) -->
+  <div id="modal-player-profile" class="modal-overlay hidden">
+    <div class="modal-content glass-card profile-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">👤</span>
+          <h3>Player Profile</h3>
+        </div>
+        <button class="btn-close-modal" id="btn-close-profile-modal">&times;</button>
+      </div>
+      
+      <div class="modal-body profile-body">
+        <div class="profile-hero">
+          <div class="profile-avatar-circle">
+            <span id="profile-avatar-icon">👑</span>
+          </div>
+          <h2 id="profile-display-username" class="glow-text">Username</h2>
+          <div class="player-id-badge-row">
+            <span class="player-id-chip">ID: <strong id="profile-display-id">#000000</strong></span>
+            <button id="btn-copy-player-id" class="btn-text btn-sm" title="Copy 6-Digit ID">📋 Copy</button>
+          </div>
+          <span class="profile-badge-chip">🏆 <span id="profile-display-trophies">100</span> Trophies</span>
+        </div>
+
+        <div class="profile-stats-grid">
+          <div class="prof-stat-card">
+            <span class="prof-val" id="profile-stat-matches">0</span>
+            <span class="prof-lbl">Matches</span>
+          </div>
+          <div class="prof-stat-card">
+            <span class="prof-val" id="profile-stat-wins">0</span>
+            <span class="prof-lbl">Wins</span>
+          </div>
+          <div class="prof-stat-card">
+            <span class="prof-val" id="profile-stat-losses">0</span>
+            <span class="prof-lbl">Losses</span>
+          </div>
+          <div class="prof-stat-card">
+            <span class="prof-val" id="profile-stat-winrate">0%</span>
+            <span class="prof-lbl">Win Rate</span>
+          </div>
+        </div>
+
+        <!-- Recent Match History Section -->
+        <div class="profile-history-section">
+          <div class="history-section-title">📜 Recent Match History</div>
+          <div id="profile-match-history-list" class="match-history-grid">
+            <!-- Dynamic match items -->
+          </div>
+        </div>
+
+        <div class="profile-actions" style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
+          <button id="btn-open-friends" class="app-btn btn-secondary btn-full">
+            👥 Friends List & Search Players
+          </button>
+          <button id="btn-profile-logout" class="app-btn btn-primary danger-btn btn-full">
+            🚪 Logout Account
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Friends List & Player Search Modal (Floating Root Overlay) -->
+  <div id="modal-friends" class="modal-overlay hidden">
+    <div class="modal-content glass-card friends-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">👥</span>
+          <h3>Bingo Friends</h3>
+        </div>
+        <button class="btn-close-modal" id="btn-close-friends-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="auth-tabs">
+          <button id="tab-friends-list" class="auth-tab active">My Friends</button>
+          <button id="tab-friends-search" class="auth-tab">Search Players</button>
+        </div>
+
+        <!-- Panel 1: My Friends -->
+        <div id="panel-friends-list" class="friends-panel">
+          <div id="my-friends-grid" class="friends-grid">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Panel 2: Search & Add Player -->
+        <div id="panel-friends-search" class="friends-panel hidden">
+          <form id="form-search-player" class="search-form">
+            <div class="input-group">
+              <label for="input-search-player">Search by 6-Digit ID or Username</label>
+              <div class="search-input-row">
+                <input type="text" id="input-search-player" class="app-input" placeholder="e.g. 582910 or Akhil" required autocomplete="off">
+                <button type="submit" class="app-btn btn-primary">🔍 Search</button>
+              </div>
+            </div>
+          </form>
+
+          <div id="search-status-msg" class="search-status-badge hidden"></div>
+          <div id="search-results-container" class="search-results-box" style="margin-top: 15px;"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <canvas id="confetti-canvas"></canvas>

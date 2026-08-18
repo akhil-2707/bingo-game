@@ -13,10 +13,12 @@ export class MultiplayerManager {
     this.socket = null;
     this.isHost = false;
     this.roomCode = null;
-    this.myPlayerName = 'Player ' + Math.floor(Math.random() * 900 + 100);
+    const savedName = localStorage.getItem('bingo_player_nickname');
+    this.myPlayerName = savedName || 'Player ' + Math.floor(Math.random() * 900 + 100);
     this.players = [];
     this.isConnected = false;
     this.selectedMode = 'grid-battle';
+    this.currentRoundId = 'round_1';
 
     this.initSocket();
   }
@@ -33,22 +35,34 @@ export class MultiplayerManager {
 
       this.socket.on('connect', () => {
         console.log('⚡ Socket.IO Connected:', this.socket.id);
+        const savedRoom = sessionStorage.getItem('bingo_active_room');
+        if (savedRoom && !this.roomCode) {
+          this.joinRoom(savedRoom, this.myPlayerName);
+        }
       });
 
       this.socket.on('room_created', ({ roomCode, room }) => {
         this.roomCode = roomCode;
+        sessionStorage.setItem('bingo_active_room', roomCode);
         this.isHost = true;
         this.isConnected = true;
         this.players = room.players || [{ socketId: this.socket.id, name: this.myPlayerName, isHost: true }];
+        this.currentRoundId = room.roundId || 'round_1';
         this.onStatusChange(`🔑 Room Key Generated: ${this.roomCode}`, 'success');
         this.onPlayerListChange(this.players);
       });
 
       this.socket.on('room_joined', ({ roomCode, room }) => {
         this.roomCode = roomCode;
+        sessionStorage.setItem('bingo_active_room', roomCode);
         this.isHost = false;
         this.isConnected = true;
         this.players = room.players || [];
+        this.currentRoundId = room.roundId || 'round_1';
+        const me = this.players.find(p => p.socketId === this.socket.id);
+        if (me) {
+          this.isHost = !!me.isHost;
+        }
         this.onStatusChange(`🔑 Joined Room Key ${this.roomCode}!`, 'success');
         this.onPlayerListChange(this.players);
       });
@@ -68,6 +82,10 @@ export class MultiplayerManager {
       });
 
       this.socket.on('game_action_received', (action) => {
+        if (action.type === 'REMATCH_ACCEPTED') {
+          this.currentRoundId = action.newRoundId || 'round_1';
+          if (action.players) this.players = action.players;
+        }
         this.onMessageReceived(action);
       });
 
@@ -100,7 +118,10 @@ export class MultiplayerManager {
   }
 
   createRoom(customName, selectedMode = 'grid-battle') {
-    if (customName) this.myPlayerName = customName;
+    if (customName) {
+      this.myPlayerName = customName;
+      localStorage.setItem('bingo_player_nickname', customName);
+    }
     this.selectedMode = selectedMode;
 
     if (this.socket && this.socket.connected) {
@@ -117,7 +138,10 @@ export class MultiplayerManager {
   }
 
   joinRoom(roomCodeInput, customName) {
-    if (customName) this.myPlayerName = customName;
+    if (customName) {
+      this.myPlayerName = customName;
+      localStorage.setItem('bingo_player_nickname', customName);
+    }
     let cleanCode = (roomCodeInput || '').trim().toUpperCase();
     if (!cleanCode) {
       this.onStatusChange('Please enter a Room Key!', 'error');
@@ -145,14 +169,31 @@ export class MultiplayerManager {
 
   broadcast(action) {
     if (this.socket && this.socket.connected && this.roomCode) {
+      action.roundId = action.roundId || this.currentRoundId;
       this.socket.emit('game_action', { roomCode: this.roomCode, action });
     }
+  }
+
+  requestRematch() {
+    this.broadcast({
+      type: 'REMATCH_REQUEST',
+      requesterName: this.myPlayerName
+    });
+  }
+
+  respondRematch(accepted) {
+    this.broadcast({
+      type: 'REMATCH_RESPONSE',
+      accepted: !!accepted,
+      declinerName: this.myPlayerName
+    });
   }
 
   leaveRoom() {
     if (this.socket && this.socket.connected && this.roomCode) {
       this.socket.emit('leave_room', { roomCode: this.roomCode });
     }
+    sessionStorage.removeItem('bingo_active_room');
     this.isConnected = false;
     this.isHost = false;
     this.roomCode = null;

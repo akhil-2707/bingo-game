@@ -37,6 +37,8 @@ export class GridBattleGame {
     // Grid Setup / Shuffle 25s Phase State
     this.isSetupPhase = false;
     this.isGridLockedByPlayer = false;
+    this.isMyReady = false;
+    this.isOpponentReady = false;
     this.setupSecondsRemaining = 25;
     this.setupTimerInterval = null;
   }
@@ -49,24 +51,23 @@ export class GridBattleGame {
 
     this.opponentType = opponentType;
     this.currentTurn = 1;
-    this.viewingPlayer = (this.opponentType === 'online' && !multiplayerManager.isHost) ? 2 : 1;
+    this.viewingPlayer = 1;
     this.calledNumbers.clear();
     this.p1Marked.clear();
     this.p2Marked.clear();
     this.p1LinesCount = 0;
     this.p2LinesCount = 0;
     this.isGameOver = false;
-    this.isManualFillMode = false;
     this.isTurnPending = false;
-    this.isSetupPhase = false;
+    this.isManualFillMode = false;
     this.isGridLockedByPlayer = false;
-    this.nextManualNumber = 1;
+    this.isMyReady = false;
+    this.isOpponentReady = false;
+
+    // Reset Boosters / Powerups state
     this.powerupUses = { magic: 1, freeze: 1, bomb: 1 };
+    this.isFrozen = false;
 
-    const setupBar = document.getElementById('grid-setup-phase-bar');
-    if (setupBar) setupBar.classList.add('hidden');
-
-    // Generate random 1-25 boards
     this.player1Board = this.generateShuffledBoard();
     this.player2Board = this.generateShuffledBoard();
 
@@ -83,11 +84,14 @@ export class GridBattleGame {
 
     this.isSetupPhase = true;
     this.isGridLockedByPlayer = false;
+    this.isMyReady = false;
+    this.isOpponentReady = false;
     this.setupSecondsRemaining = seconds;
 
     const setupBar = document.getElementById('grid-setup-phase-bar');
     const timerDisplay = document.getElementById('setup-countdown-timer');
     const btnReady = document.getElementById('btn-setup-ready');
+    const oppReadyBadge = document.getElementById('opp-ready-badge');
 
     if (setupBar) setupBar.classList.remove('hidden');
     if (timerDisplay) timerDisplay.textContent = `${this.setupSecondsRemaining}s`;
@@ -95,6 +99,16 @@ export class GridBattleGame {
       btnReady.innerHTML = '✅ Lock Grid';
       btnReady.disabled = false;
       btnReady.classList.add('pulse-glow');
+    }
+
+    if (oppReadyBadge) {
+      if (this.opponentType === 'online' || multiplayerManager.isConnected) {
+        oppReadyBadge.textContent = 'Opponent: ⏳ Setting Up...';
+        oppReadyBadge.style.color = 'var(--text-muted)';
+        oppReadyBadge.classList.remove('hidden');
+      } else {
+        oppReadyBadge.classList.add('hidden');
+      }
     }
 
     this.renderBoard();
@@ -115,14 +129,118 @@ export class GridBattleGame {
 
   lockGridEarly() {
     this.isGridLockedByPlayer = true;
+    this.isMyReady = true;
     const btnReady = document.getElementById('btn-setup-ready');
     if (btnReady) {
-      btnReady.innerHTML = '🔒 Grid Locked!';
+      btnReady.innerHTML = '✅ Ready! (Waiting...)';
       btnReady.disabled = true;
       btnReady.classList.remove('pulse-glow');
     }
+
+    if (this.opponentType === 'online' || multiplayerManager.isConnected) {
+      multiplayerManager.broadcast({
+        type: 'PLAYER_READY',
+        isReady: true,
+        socketId: multiplayerManager.socket?.id
+      });
+    }
+
     this.renderBoard();
     sound.playPop();
+
+    this.checkBothPlayersReady();
+  }
+
+  setOpponentReady(isReady = true) {
+    this.isOpponentReady = isReady;
+    const oppReadyBadge = document.getElementById('opp-ready-badge');
+    if (oppReadyBadge) {
+      oppReadyBadge.textContent = isReady ? 'Opponent: ✅ READY!' : 'Opponent: ⏳ Setting Up...';
+      oppReadyBadge.style.color = isReady ? 'var(--accent-cyan)' : 'var(--text-muted)';
+      oppReadyBadge.classList.remove('hidden');
+    }
+    sound.playPop();
+
+    this.checkBothPlayersReady();
+  }
+
+  checkBothPlayersReady() {
+    if (this.opponentType !== 'online' && !multiplayerManager.isConnected) {
+      if (this.isMyReady) {
+        this.finishGridSetupPhase();
+      }
+      return;
+    }
+
+    if (this.isMyReady && this.isOpponentReady) {
+      if (this.setupTimerInterval) {
+        clearInterval(this.setupTimerInterval);
+        this.setupTimerInterval = null;
+      }
+      this.finishGridSetupPhase();
+    }
+  }
+
+  handleRemoteVictory(data) {
+    if (this.isGameOver) return; // Prevent duplicate winner handling
+    this.isGameOver = true;
+    this.isTurnPending = false;
+    this.isSetupPhase = false;
+
+    if (this.setupTimerInterval) {
+      clearInterval(this.setupTimerInterval);
+      this.setupTimerInterval = null;
+    }
+
+    const setupBar = document.getElementById('grid-setup-phase-bar');
+    if (setupBar) setupBar.classList.add('hidden');
+
+    this.renderBoard();
+    this.updateBingoBadges(this.viewingPlayer === 1 ? this.p1LinesCount : this.p2LinesCount);
+
+    sound.playPop();
+
+    this.onVictory({
+      winner: data.winnerName || 'Opponent',
+      gameType: '5x5 Grid Battle',
+      p1Lines: data.p1Lines !== undefined ? data.p1Lines : this.p1LinesCount,
+      p2Lines: data.p2Lines !== undefined ? data.p2Lines : this.p2LinesCount,
+      totalCalls: data.totalCalls || this.calledNumbers.size,
+      opponentType: this.opponentType,
+      isLossForMe: true
+    });
+  }
+
+  resetForNewRound(newRoundId) {
+    if (this.setupTimerInterval) {
+      clearInterval(this.setupTimerInterval);
+      this.setupTimerInterval = null;
+    }
+
+    this.currentRoundId = newRoundId || 'round_1';
+    this.currentTurn = 1;
+    this.viewingPlayer = multiplayerManager.isHost ? 1 : 2;
+    this.calledNumbers.clear();
+    this.p1Marked.clear();
+    this.p2Marked.clear();
+    this.p1LinesCount = 0;
+    this.p2LinesCount = 0;
+    this.isGameOver = false;
+    this.isTurnPending = false;
+    this.isManualFillMode = false;
+    this.isGridLockedByPlayer = false;
+    this.isMyReady = false;
+    this.isOpponentReady = false;
+
+    this.powerupUses = { magic: 1, freeze: 1, bomb: 1 };
+    this.isFrozen = false;
+
+    this.player1Board = this.generateShuffledBoard();
+    this.player2Board = this.generateShuffledBoard();
+
+    this.renderBoard();
+    this.updateBingoBadges(0);
+    this.startGridSetupPhase(25);
   }
 
   finishGridSetupPhase() {
@@ -369,15 +487,36 @@ export class GridBattleGame {
     if (this.p1LinesCount >= 5 || this.p2LinesCount >= 5) {
       this.isGameOver = true;
       this.isTurnPending = false;
-      let winner = 'Player 1';
+      
+      const hostP = multiplayerManager.players.find(p => p.isHost);
+      const guestP = multiplayerManager.players.find(p => !p.isHost);
+      const hostName = hostP ? hostP.name : (multiplayerManager.isHost ? multiplayerManager.myPlayerName : 'Player 1');
+      const guestName = guestP ? guestP.name : (!multiplayerManager.isHost ? multiplayerManager.myPlayerName : 'Player 2');
+
+      let winner = hostName;
       if (this.p1LinesCount >= 5 && this.p2LinesCount >= 5) {
         winner = 'Tie Game!';
       } else if (this.p2LinesCount >= 5) {
-        winner = this.opponentType.startsWith('ai') ? 'Bingo Bot' : 'Player 2';
+        winner = this.opponentType.startsWith('ai') ? 'Bingo Bot' : guestName;
+      } else if (this.p1LinesCount >= 5) {
+        winner = hostName;
       }
 
       this.renderBoard();
       this.updateBingoBadges(this.viewingPlayer === 1 ? this.p1LinesCount : this.p2LinesCount);
+
+      if (!isRemote && (this.opponentType === 'online' || multiplayerManager.isConnected)) {
+        multiplayerManager.broadcast({
+          type: 'GRID_VICTORY',
+          winnerName: winner,
+          winnerSocketId: multiplayerManager.socket?.id,
+          p1Lines: this.p1LinesCount,
+          p2Lines: this.p2LinesCount,
+          totalCalls: this.calledNumbers.size,
+          roundId: multiplayerManager.currentRoundId
+        });
+      }
+
       sound.playVictoryFanfare();
 
       this.onVictory({
@@ -386,7 +525,8 @@ export class GridBattleGame {
         p1Lines: this.p1LinesCount,
         p2Lines: this.p2LinesCount,
         totalCalls: this.calledNumbers.size,
-        opponentType: this.opponentType
+        opponentType: this.opponentType,
+        isLossForMe: false
       });
       return;
     }

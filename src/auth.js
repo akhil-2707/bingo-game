@@ -155,12 +155,14 @@ export class AuthManager {
     const avatarEl = document.getElementById('header-user-avatar');
 
     if (this.isLoggedIn()) {
+      const name = this.currentUser.displayName || this.currentUser.username;
+      const avatar = this.currentUser.avatar || '👑';
       if (nameEl) {
-        nameEl.textContent = this.currentUser.username;
-        nameEl.title = this.currentUser.username;
+        nameEl.textContent = name;
+        nameEl.title = `${name} (${this.currentUser.username})`;
       }
       if (trophiesEl) trophiesEl.textContent = `🏆 ${this.currentUser.trophies || 100}`;
-      if (avatarEl) avatarEl.textContent = '👑';
+      if (avatarEl) avatarEl.textContent = avatar;
     } else {
       if (nameEl) {
         nameEl.textContent = 'Login';
@@ -168,6 +170,31 @@ export class AuthManager {
       }
       if (trophiesEl) trophiesEl.textContent = '🏆 100';
       if (avatarEl) avatarEl.textContent = '👤';
+    }
+  }
+
+  async updateProfile(displayName, avatar, bio) {
+    if (!this.currentUser) return { success: false, error: 'Not logged in' };
+    const username = this.currentUser.username;
+    try {
+      const res = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, displayName, avatar, bio })
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.user) {
+        this.currentUser.displayName = data.user.displayName;
+        this.currentUser.avatar = data.user.avatar;
+        this.currentUser.bio = data.user.bio;
+        this.saveUser(this.currentUser);
+        this.updateHeaderProfileUI();
+        return { success: true, user: data.user };
+      } else {
+        return { success: false, error: data.error || 'Failed to update profile' };
+      }
+    } catch (e) {
+      return { success: false, error: 'Network error updating profile' };
     }
   }
 
@@ -234,26 +261,44 @@ export class AuthManager {
     const profileModal = document.getElementById('modal-player-profile');
     if (!profileModal || !this.currentUser) return;
 
+    const displayAvatar = document.getElementById('profile-display-avatar');
     const displayUsername = document.getElementById('profile-display-username');
     const displayPlayerId = document.getElementById('profile-display-id');
+    const displayBio = document.getElementById('profile-display-bio');
     const displayTrophies = document.getElementById('profile-display-trophies');
+    const displayFriendsCount = document.getElementById('profile-display-friends-count');
     const statMatches = document.getElementById('profile-stat-matches');
     const statWins = document.getElementById('profile-stat-wins');
     const statLosses = document.getElementById('profile-stat-losses');
     const statWinrate = document.getElementById('profile-stat-winrate');
     const btnCopyPlayerId = document.getElementById('btn-copy-player-id');
+    const btnSharePlayerId = document.getElementById('btn-share-player-id');
     const historyContainer = document.getElementById('profile-match-history-list');
 
-    if (displayUsername) displayUsername.textContent = this.currentUser.username;
-    if (displayPlayerId) displayPlayerId.textContent = `#${this.getPlayerId()}`;
+    if (displayAvatar) displayAvatar.textContent = this.currentUser.avatar || '👤';
+    if (displayUsername) displayUsername.textContent = this.currentUser.displayName || this.currentUser.username;
+    if (displayPlayerId) displayPlayerId.textContent = `${this.getPlayerId()}`;
+    if (displayBio) displayBio.textContent = this.currentUser.bio || 'Ready for Bingo!';
     if (displayTrophies) displayTrophies.textContent = this.currentUser.trophies || 100;
+    if (displayFriendsCount) displayFriendsCount.textContent = this.currentUser.friends ? this.currentUser.friends.length : 0;
 
-    if (btnCopyPlayerId) {
-      btnCopyPlayerId.onclick = () => {
+    const copyHandler = () => {
+      const idStr = this.getPlayerId();
+      navigator.clipboard.writeText(idStr).then(() => {
+        alert(`📋 Player ID ${idStr} copied to clipboard! Share with friends.`);
+      });
+    };
+
+    if (btnCopyPlayerId) btnCopyPlayerId.onclick = copyHandler;
+    if (btnSharePlayerId) {
+      btnSharePlayerId.onclick = () => {
         const idStr = this.getPlayerId();
-        navigator.clipboard.writeText(idStr).then(() => {
-          alert(`📋 Player ID #${idStr} copied to clipboard! Share with friends.`);
-        });
+        const shareText = `Add me on Bingo!\nPlayer ID: ${idStr}`;
+        if (navigator.share) {
+          navigator.share({ title: 'Bingo Master Player ID', text: shareText }).catch(() => copyHandler());
+        } else {
+          copyHandler();
+        }
       };
     }
 

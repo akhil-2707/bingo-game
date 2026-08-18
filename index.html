@@ -42,14 +42,17 @@
           <span id="header-user-trophies" class="header-user-trophies">🏆 100</span>
         </button>
 
+        <button id="btn-open-friends" class="btn-user-auth btn-friends-header" title="Friends & Social" style="position: relative;">
+          <span class="user-avatar-icon">👥</span>
+          <span class="header-user-name">Friends</span>
+          <span id="friends-unread-badge" class="badge-count hidden">0</span>
+        </button>
+
         <button id="btn-online-room" class="icon-btn glow-accent" title="Online Multiplayer Rooms">
           <i data-lucide="globe"></i>
         </button>
         <button id="btn-sound-toggle" class="icon-btn" title="Toggle Sound & Speech">
           <i data-lucide="volume-2" id="icon-sound"></i>
-        </button>
-        <button id="btn-stats" class="icon-btn" title="Statistics & Victories">
-          <i data-lucide="trophy"></i>
         </button>
       </div>
     </header>
@@ -116,7 +119,22 @@
             </div>
           </div>
 
-          <!-- Mode Card 4: Friends Online Arcade -->
+          <!-- Mode Card 4: Katam-Kutta (Modern Disappearing Tic-Tac-Toe) -->
+          <div class="hub-mode-card glass-card" data-launch-tab="katam-kutta">
+            <div class="mode-card-banner">
+              <img src="/assets/katam_kutta_3d_banner.png" alt="Katam-Kutta Tic Tac Toe" class="mode-card-img" />
+              <span class="mode-card-chip cyan">❌⭕ 3-PIECE DISAPPEARING CLASH</span>
+            </div>
+            <div class="mode-card-body">
+              <h3 class="mode-card-title">Katam-Kutta (Tic Tac Toe)</h3>
+              <p class="mode-card-desc">Modern continuous clash! Oldest moves vanish automatically — no draws!</p>
+              <button class="app-btn btn-primary btn-full pulse-glow">
+                START THE GAME ⚔️
+              </button>
+            </div>
+          </div>
+
+          <!-- Mode Card 5: Friends Online Arcade -->
           <div class="hub-mode-card glass-card" data-launch-tab="online-room">
             <div class="mode-card-banner">
               <img src="/assets/friends_multiplayer_3d_banner.png" alt="Play with Friends" class="mode-card-img" />
@@ -124,7 +142,7 @@
             </div>
             <div class="mode-card-body">
               <h3 class="mode-card-title">Play with Friends</h3>
-              <p class="mode-card-desc">Host or join private room keys to play 5x5 Grid Battle or 75-Ball with friends!</p>
+              <p class="mode-card-desc">Host or join private room keys to play 5x5 Grid Battle, 75-Ball, or Katam-Kutta!</p>
               <button class="app-btn btn-secondary btn-full">
                 ENTER ROOM 👥
               </button>
@@ -183,6 +201,7 @@
             <span class="setup-icon">⏱️</span>
             <span class="setup-title">Grid Setup:</span>
             <span id="setup-countdown-timer" class="setup-timer-val">25s</span>
+            <span id="opp-ready-badge" class="opp-ready-badge hidden">Opponent: ⏳ Setting Up...</span>
           </div>
           <div class="setup-actions-group">
             <button id="btn-setup-shuffle" class="app-btn btn-secondary btn-small" title="Shuffle Board Numbers">
@@ -560,6 +579,14 @@
                     <span class="badge-players">👨‍👩‍👧‍👦 4 to 5 Players</span>
                   </div>
                 </div>
+
+                <div class="game-opt-card" id="opt-mode-kk" data-mode="katam-kutta">
+                  <div class="opt-icon">❌⭕</div>
+                  <div class="opt-info">
+                    <h5>Katam-Kutta (Tic Tac Toe)</h5>
+                    <span class="badge-players">👥 2 Players (3-Piece Disappearing)</span>
+                  </div>
+                </div>
               </div>
 
               <button id="btn-create-room" class="app-btn btn-primary btn-large btn-full">
@@ -626,6 +653,101 @@
         </div>
       </section>
 
+      <!-- ========================================== -->
+      <!-- GAME 4: KATAM-KUTTA (MODERN TIC TAC TOE) -->
+      <!-- ========================================== -->
+      <section id="view-katam-kutta" class="view-panel">
+        
+        <!-- Exit Game Header -->
+        <div class="mode-exit-bar glass-card">
+          <button class="btn-back-hub app-btn btn-secondary btn-small">
+            <i data-lucide="arrow-left"></i> Exit Game
+          </button>
+          <span class="exit-bar-title">Katam-Kutta (Modern Tic Tac Toe)</span>
+          <button id="btn-kk-help" class="icon-btn" title="How to Play Rules">
+            <i data-lucide="help-circle"></i>
+          </button>
+        </div>
+
+        <!-- 3D Katam Kutta Hero Banner -->
+        <div class="caller-hero-banner glass-card">
+          <img src="/assets/katam_kutta_3d_banner.png" alt="3D Katam Kutta Arena" class="hopper-banner-img" />
+          <div class="banner-overlay-content">
+            <span class="banner-chip cyan">❌⭕ 3-PIECE DISAPPEARING CLASH</span>
+            <h2 class="banner-title glow-text">KATAM-KUTTA TIC TAC TOE</h2>
+          </div>
+        </div>
+
+        <!-- Katam Kutta Active Gameplay Container (Directly visible for instant Bot play) -->
+        <div id="kk-game-play-area" class="kk-game-wrapper glass-card">
+          
+          <!-- Player Info & Symbol HUD Bar -->
+          <div class="kk-hud-bar">
+            <div id="kk-player-x" class="kk-player-card active">
+              <div class="p-avatar-box">
+                <span id="kk-avatar-x">👤</span>
+                <span class="p-symbol x-symbol">X</span>
+              </div>
+              <div class="p-details">
+                <span id="kk-name-x" class="p-name">Akhil</span>
+                <div class="kk-active-dots" id="kk-dots-x">
+                  <span class="dot active"></span><span class="dot active"></span><span class="dot active"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="kk-vs-badge">VS</div>
+
+            <div id="kk-player-o" class="kk-player-card">
+              <div class="p-details align-right">
+                <span id="kk-name-o" class="p-name">Bingo Bot</span>
+                <div class="kk-active-dots" id="kk-dots-o">
+                  <span class="dot active"></span><span class="dot active"></span><span class="dot active"></span>
+                </div>
+              </div>
+              <div class="p-avatar-box">
+                <span id="kk-avatar-o">🤖</span>
+                <span class="p-symbol o-symbol">O</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Turn & Bot Thinking Status Banner -->
+          <div class="kk-status-banner">
+            <span id="kk-turn-indicator" class="turn-text">Akhil's Turn (X)</span>
+            <div id="kk-bot-thinking-badge" class="bot-thinking-pill hidden">
+              <span class="thinking-spinner">🤖</span> Bot is thinking...
+            </div>
+          </div>
+
+          <!-- 3x3 Katam-Kutta Board Grid -->
+          <div class="kk-board-container">
+            <div id="kk-board" class="kk-board-grid">
+              <div class="kk-cell" data-index="0"></div>
+              <div class="kk-cell" data-index="1"></div>
+              <div class="kk-cell" data-index="2"></div>
+              <div class="kk-cell" data-index="3"></div>
+              <div class="kk-cell" data-index="4"></div>
+              <div class="kk-cell" data-index="5"></div>
+              <div class="kk-cell" data-index="6"></div>
+              <div class="kk-cell" data-index="7"></div>
+              <div class="kk-cell" data-index="8"></div>
+            </div>
+          </div>
+
+          <!-- Controls Footer (Bot Difficulty Selector) -->
+          <div class="kk-footer-controls" style="margin-top: 10px;">
+            <div id="kk-bot-difficulty-controls" class="diff-picker-group">
+              <span class="diff-label">Bot Difficulty:</span>
+              <button class="diff-btn" data-diff="easy">Easy</button>
+              <button class="diff-btn active" data-diff="medium">Medium</button>
+              <button class="diff-btn" data-diff="hard">Hard</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
     </main>
 
 
@@ -640,7 +762,7 @@
       <div class="modal-content glass-card victory-card">
         <button class="close-modal victory-close-btn" id="btn-victory-close" title="Close & View Board"><i data-lucide="x"></i></button>
         <div class="trophy-banner">
-          <span class="trophy-icon">🏆</span>
+          <span class="trophy-icon" id="victory-icon">🏆</span>
           <h2 id="victory-title" class="glow-text">BINGO VICTORY!</h2>
         </div>
         <p id="victory-desc">Congratulations! You completed the Bingo pattern!</p>
@@ -653,6 +775,25 @@
           </button>
           <button id="btn-victory-view-board" class="app-btn btn-secondary btn-large">
             <i data-lucide="eye"></i> View Board
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Real-Time Rematch Request Modal -->
+    <div id="modal-rematch-request" class="app-modal hidden">
+      <div class="modal-content glass-card victory-card" style="text-align: center;">
+        <div class="trophy-banner">
+          <span class="trophy-icon">🔄</span>
+          <h2 id="rematch-request-title" class="glow-text">Rematch Requested!</h2>
+        </div>
+        <p id="rematch-request-desc">Your opponent wants to play another game!</p>
+        <div class="modal-actions" style="margin-top: 20px;">
+          <button id="btn-rematch-accept" class="app-btn btn-primary btn-large pulse-glow">
+            ✅ Accept Rematch
+          </button>
+          <button id="btn-rematch-decline" class="app-btn btn-secondary btn-large danger-text">
+            ❌ Decline
           </button>
         </div>
       </div>
@@ -834,14 +975,19 @@
       <div class="modal-body profile-body">
         <div class="profile-hero">
           <div class="profile-avatar-circle">
-            <span id="profile-avatar-icon">👑</span>
+            <span id="profile-display-avatar" class="hero-avatar">👤</span>
           </div>
           <h2 id="profile-display-username" class="glow-text">Username</h2>
           <div class="player-id-badge-row">
-            <span class="player-id-chip">ID: <strong id="profile-display-id">#000000</strong></span>
-            <button id="btn-copy-player-id" class="btn-text btn-sm" title="Copy 6-Digit ID">📋 Copy</button>
+            <span class="player-id-chip">ID: <strong id="profile-display-id">BGO-000000</strong></span>
+            <button id="btn-copy-player-id" class="btn-text btn-sm" title="Copy Player ID">📋 Copy</button>
+            <button id="btn-share-player-id" class="btn-text btn-sm" title="Share Player ID">📤 Share</button>
           </div>
-          <span class="profile-badge-chip">🏆 <span id="profile-display-trophies">100</span> Trophies</span>
+          <p id="profile-display-bio" class="profile-bio-text">Ready for Bingo!</p>
+          <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: center;">
+            <span class="profile-badge-chip">🏆 <span id="profile-display-trophies">100</span> Trophies</span>
+            <span class="profile-badge-chip">👥 <span id="profile-display-friends-count">0</span> Friends</span>
+          </div>
         </div>
 
         <div class="profile-stats-grid">
@@ -872,11 +1018,94 @@
         </div>
 
         <div class="profile-actions" style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-          <button id="btn-open-friends" class="app-btn btn-secondary btn-full">
-            👥 Friends List & Search Players
+          <button id="btn-open-edit-profile" class="app-btn btn-accent btn-full">
+            ✏️ Edit Profile
           </button>
           <button id="btn-profile-logout" class="app-btn btn-primary danger-btn btn-full">
             🚪 Logout Account
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Profile Modal (Floating Root Overlay) -->
+  <div id="modal-edit-profile" class="modal-overlay hidden">
+    <div class="modal-content glass-card auth-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">✏️</span>
+          <h3>Edit Profile</h3>
+        </div>
+        <button class="btn-close-modal" id="btn-close-edit-profile">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-edit-profile" class="auth-form">
+          <div class="input-group">
+            <label>Select Profile Avatar</label>
+            <div class="avatar-picker-grid">
+              <span class="avatar-option selected" data-avatar="👤">👤</span>
+              <span class="avatar-option" data-avatar="👑">👑</span>
+              <span class="avatar-option" data-avatar="🔥">🔥</span>
+              <span class="avatar-option" data-avatar="⚡">⚡</span>
+              <span class="avatar-option" data-avatar="😎">😎</span>
+              <span class="avatar-option" data-avatar="🐯">🐯</span>
+              <span class="avatar-option" data-avatar="🎮">🎮</span>
+              <span class="avatar-option" data-avatar="💎">💎</span>
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="input-edit-display-name">Display Name</label>
+            <input type="text" id="input-edit-display-name" class="app-input" placeholder="Enter display name..." required minlength="2" maxlength="20">
+          </div>
+          <div class="input-group">
+            <label for="input-edit-bio">Bio / Status</label>
+            <input type="text" id="input-edit-bio" class="app-input" placeholder="Ready for Bingo!" maxlength="60">
+          </div>
+          <div class="input-group">
+            <label>Player ID (Permanent)</label>
+            <span id="edit-profile-player-id" class="player-id-readonly">BGO-000000</span>
+          </div>
+          <button type="submit" id="btn-save-profile" class="app-btn btn-primary btn-full pulse-glow" style="margin-top: 15px;">
+            💾 SAVE CHANGES
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Friend Profile View Modal (Floating Root Overlay) -->
+  <div id="modal-friend-profile" class="modal-overlay hidden">
+    <div class="modal-content glass-card profile-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">👤</span>
+          <h3>Player Profile</h3>
+        </div>
+        <button class="btn-close-modal" id="btn-close-friend-profile">&times;</button>
+      </div>
+      <div class="modal-body profile-body">
+        <div class="profile-hero">
+          <div class="profile-avatar-circle">
+            <span id="friend-profile-avatar" class="hero-avatar">👤</span>
+          </div>
+          <h2 id="friend-profile-name" class="glow-text">Friend Name</h2>
+          <div class="player-id-badge-row">
+            <span class="player-id-chip">ID: <strong id="friend-profile-id">BGO-000000</strong></span>
+          </div>
+          <p id="friend-profile-bio" class="profile-bio-text">Ready for Bingo!</p>
+          <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: center;">
+            <span id="friend-profile-status" class="status-pill online">🟢 Online</span>
+            <span id="friend-profile-trophies" class="profile-badge-chip">100 Trophies</span>
+            <span id="friend-profile-wins" class="profile-badge-chip">0 Victories</span>
+          </div>
+        </div>
+        <div class="profile-actions" style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+          <button id="btn-friend-invite-game" class="app-btn btn-primary btn-large btn-full pulse-glow">
+            🎮 INVITE TO GAME
+          </button>
+          <button id="btn-friend-remove" class="app-btn btn-secondary danger-text btn-full">
+            ❌ REMOVE FRIEND
           </button>
         </div>
       </div>
@@ -896,8 +1125,9 @@
 
       <div class="modal-body">
         <div class="auth-tabs">
-          <button id="tab-friends-list" class="auth-tab active">My Friends</button>
-          <button id="tab-friends-search" class="auth-tab">Search Players</button>
+          <button id="tab-friends-list" class="auth-tab active">👥 Friends</button>
+          <button id="tab-friends-requests" class="auth-tab">📩 Requests <span id="tab-requests-count"></span></button>
+          <button id="tab-friends-search" class="auth-tab">🔍 Search Players</button>
         </div>
 
         <!-- Panel 1: My Friends -->
@@ -907,13 +1137,20 @@
           </div>
         </div>
 
-        <!-- Panel 2: Search & Add Player -->
+        <!-- Panel 2: Pending Friend Requests -->
+        <div id="panel-friends-requests" class="friends-panel hidden">
+          <div id="friend-requests-list" class="requests-grid">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Panel 3: Search & Add Player -->
         <div id="panel-friends-search" class="friends-panel hidden">
           <form id="form-search-player" class="search-form">
             <div class="input-group">
-              <label for="input-search-player">Search by 6-Digit ID or Username</label>
+              <label for="input-search-player">Search by Player ID (BGO-XXXXXX) or Name</label>
               <div class="search-input-row">
-                <input type="text" id="input-search-player" class="app-input" placeholder="e.g. 582910 or Akhil" required autocomplete="off">
+                <input type="text" id="input-search-player" class="app-input" placeholder="e.g. BGO-482951 or Akhil" required autocomplete="off">
                 <button type="submit" class="app-btn btn-primary">🔍 Search</button>
               </div>
             </div>
@@ -921,6 +1158,70 @@
 
           <div id="search-status-msg" class="search-status-badge hidden"></div>
           <div id="search-results-container" class="search-results-box" style="margin-top: 15px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Katam Kutta How to Play Rules Modal -->
+  <div id="modal-kk-help" class="app-modal hidden">
+    <div class="modal-content glass-card rules-modal-content">
+      <div class="modal-header">
+        <h3>❌⭕ How to Play Katam-Kutta</h3>
+        <button class="close-modal" id="btn-close-kk-help">&times;</button>
+      </div>
+      <div class="modal-body rules-body">
+        <ul class="rules-list">
+          <li><strong>1. Alternating Turns:</strong> Players take turns placing their symbol (❌ or ⭕).</li>
+          <li><strong>2. 3 Active Pieces Limit:</strong> Each player can have a maximum of 3 active pieces on the board.</li>
+          <li><strong>3. Disappearing Move Mechanic:</strong> When you place your 4th piece, your OLDEST active piece automatically vanishes!</li>
+          <li><strong>4. Oldest Piece Warning Indicator:</strong> A pulsing glowing ring highlights which piece will disappear next.</li>
+          <li><strong>5. No Draws:</strong> The board never ends in a full-board draw. The game continues continuously until a 3-in-a-row is formed on the active board!</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Select Bot Level Modal for 5x5 Bingo Battle -->
+  <div id="modal-select-bot-level" class="app-modal hidden">
+    <div class="modal-content glass-card bot-select-modal-content">
+      <div class="modal-header">
+        <h3>⚔️ 5x5 Clash of Bingo</h3>
+        <button class="close-modal" id="btn-close-bot-select">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <p class="bot-select-subtitle">Select Bot Difficulty Level to Start Match Immediately:</p>
+        
+        <div class="bot-level-options-grid">
+          <button class="bot-level-card btn-bot-level" data-level="ai-easy">
+            <div class="level-icon">🌱</div>
+            <div class="level-info">
+              <h4>Easy Bot</h4>
+              <span>Relaxed & Friendly AI</span>
+            </div>
+          </button>
+
+          <button class="bot-level-card btn-bot-level active" data-level="ai-medium">
+            <div class="level-icon">⚡</div>
+            <div class="level-info">
+              <h4>Medium Bot</h4>
+              <span>Balanced Challenger</span>
+            </div>
+          </button>
+
+          <button class="bot-level-card btn-bot-level" data-level="ai-hard">
+            <div class="level-icon">🔥</div>
+            <div class="level-info">
+              <h4>Hard Bot</h4>
+              <span>Master Strategist AI</span>
+            </div>
+          </button>
+        </div>
+
+        <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+          <button id="btn-bot-manual-fill" class="app-btn btn-secondary btn-full">
+            ✍️ Fill Grid Manually First (1-25)
+          </button>
         </div>
       </div>
     </div>

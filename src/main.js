@@ -8,6 +8,7 @@ import { statsManager } from './stats.js';
 import { multiplayerManager } from './multiplayer.js';
 import { authManager } from './auth.js';
 import { FriendsManager } from './friends.js';
+import { KatamKuttaGame } from './katamKutta.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // Initialize Lucide Icons
@@ -22,6 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Friends System & Game Invites
   const friendsManager = new FriendsManager(authManager, multiplayerManager);
   friendsManager.init();
+
+  // Initialize Katam Kutta Game Engine
+  const kkGame = new KatamKuttaGame(authManager, multiplayerManager);
 
   // ==========================================
   // CINEMATIC GAME INTRO ANIMATION CONTROLLER
@@ -177,31 +181,72 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let lastVictoryGameType = '5x5 Battle';
 
-  const showVictoryModal = ({ winner = 'Player 1', gameType = '5x5 Battle', p1Lines, p2Lines, totalCalls, opponentType = '' }) => {
+  const showVictoryModal = ({ winner = 'Player 1', gameType = '5x5 Battle', p1Lines, p2Lines, totalCalls, opponentType = '', isLossForMe = false }) => {
     lastVictoryGameType = gameType;
-    triggerConfetti();
-    if (victoryTitle) victoryTitle.textContent = winner.includes('Bot') ? 'BOT WINS!' : 'BINGO VICTORY!';
-    if (victoryDesc) victoryDesc.textContent = `${winner} won the ${gameType} match!`;
+    const victoryIcon = document.getElementById('victory-icon');
+
+    if (btnVictoryReplay) {
+      btnVictoryReplay.disabled = false;
+      btnVictoryReplay.innerHTML = '<i data-lucide="rotate-ccw"></i> Play Again';
+      createIcons({ icons });
+    }
+
+    if (isLossForMe) {
+      sound.playPop();
+      if (victoryIcon) victoryIcon.textContent = '😔';
+      if (victoryTitle) {
+        victoryTitle.textContent = `😔 ${winner} Won!`;
+        victoryTitle.style.color = 'var(--ios-pink)';
+      }
+      if (victoryDesc) {
+        victoryDesc.textContent = `${winner} has completed Bingo.`;
+      }
+    } else if (winner === 'Tie Game!') {
+      sound.playPop();
+      if (victoryIcon) victoryIcon.textContent = '🤝';
+      if (victoryTitle) {
+        victoryTitle.textContent = '🤝 TIE GAME!';
+        victoryTitle.style.color = 'var(--ios-amber)';
+      }
+      if (victoryDesc) {
+        victoryDesc.textContent = 'Both players completed 5 lines at the same time!';
+      }
+    } else {
+      triggerConfetti();
+      sound.playVictoryFanfare();
+      if (victoryIcon) victoryIcon.textContent = '🎉';
+      if (victoryTitle) {
+        victoryTitle.textContent = winner.includes('Bot') ? '🤖 BOT WINS!' : `🎉 BINGO!\n${winner}, You Won!`;
+        victoryTitle.style.color = 'var(--ios-mint)';
+      }
+      if (victoryDesc) {
+        victoryDesc.textContent = `Congratulations! You completed 5 lines first and won the match!`;
+      }
+    }
 
     if (victoryStats) {
+      const isHost = multiplayerManager.isConnected ? multiplayerManager.isHost : true;
+      const myLineCount = (p1Lines !== undefined && p2Lines !== undefined) ? (isHost ? p1Lines : p2Lines) : p1Lines;
+      const oppLineCount = (p1Lines !== undefined && p2Lines !== undefined) ? (isHost ? p2Lines : p1Lines) : p2Lines;
+
       victoryStats.innerHTML = `
         <div class="stat-row"><strong>Game Mode:</strong> ${gameType}</div>
-        ${p1Lines !== undefined ? `<div class="stat-row"><strong>Your Lines:</strong> ${p1Lines} / 5</div>` : ''}
-        ${p2Lines !== undefined ? `<div class="stat-row"><strong>Opponent Lines:</strong> ${p2Lines} / 5</div>` : ''}
+        ${myLineCount !== undefined ? `<div class="stat-row"><strong>Your Lines:</strong> ${myLineCount} / 5</div>` : ''}
+        ${oppLineCount !== undefined ? `<div class="stat-row"><strong>Opponent Lines:</strong> ${oppLineCount} / 5</div>` : ''}
         ${totalCalls ? `<div class="stat-row"><strong>Total Numbers Called:</strong> ${totalCalls}</div>` : ''}
       `;
     }
 
     // Track Stats & Trophy Rewards
-    const isWin = !winner.includes('Bot') && winner !== 'Player 2';
+    const isWin = !isLossForMe && winner !== 'Tie Game!' && !winner.includes('Bot') && winner !== 'Player 2';
     const isBotMatch = opponentType && opponentType.includes('ai');
-    const isMultiplayer = multiplayerManager.isConnected || opponentType === 'multiplayer';
+    const isMultiplayer = multiplayerManager.isConnected || opponentType === 'multiplayer' || opponentType === 'online';
 
     if (authManager.isLoggedIn()) {
       if (isMultiplayer) {
         if (isWin) {
           authManager.updateTrophies(5, 'multiplayer_win');
-        } else {
+        } else if (isLossForMe) {
           authManager.updateTrophies(-5, 'multiplayer_loss');
         }
       } else if (isBotMatch && isWin) {
@@ -214,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const newlyUnlocked = statsManager.recordGameEnd({
       gameType,
       isWin,
-      lines: p1Lines || 1,
+      lines: multiplayerManager.isHost ? (p1Lines || 1) : (p2Lines || 1),
       opponentType
     });
 
@@ -231,6 +276,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnVictoryReplay) {
     btnVictoryReplay.addEventListener('click', () => {
+      if (multiplayerManager.isConnected) {
+        multiplayerManager.requestRematch();
+        btnVictoryReplay.disabled = true;
+        btnVictoryReplay.innerHTML = '<span class="pulse-icon">⏳</span> Waiting for Opponent...';
+        showToast('🔄 Rematch requested! Waiting for opponent to accept...', 3500);
+        return;
+      }
       if (modalVictory) modalVictory.classList.add('hidden');
       if (lastVictoryGameType.includes('Housie') || lastVictoryGameType.includes('90')) {
         if (btnH90Restart) btnH90Restart.click();
@@ -304,6 +356,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const activePanel = document.getElementById(`view-${targetTab}`);
     if (activePanel) activePanel.classList.add('active');
+
+    if (targetTab === 'katam-kutta') {
+      if (!multiplayerManager.isConnected) {
+        const p1 = authManager.isLoggedIn() ? (authManager.currentUser.displayName || authManager.currentUser.username) : 'Player 1';
+        kkGame.init({
+          gameMode: 'bot',
+          botDifficulty: kkGame.botDifficulty || 'medium',
+          p1Name: p1,
+          p2Name: 'Bingo Bot 🤖'
+        });
+      }
+    }
   };
 
   if (btnOnlineRoom) {
@@ -325,13 +389,48 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Main Hub Mode Cards Launchers
+  // Main Hub Mode Cards Launchers & Bot Level Selector Modal
+  const modalSelectBotLevel = document.getElementById('modal-select-bot-level');
+  const btnCloseBotSelect = document.getElementById('btn-close-bot-select');
+  const btnBotManualFill = document.getElementById('btn-bot-manual-fill');
+  const botLevelCards = document.querySelectorAll('.btn-bot-level');
+
+  if (btnCloseBotSelect && modalSelectBotLevel) {
+    btnCloseBotSelect.addEventListener('click', () => modalSelectBotLevel.classList.add('hidden'));
+  }
+
+  if (btnBotManualFill && modalSelectBotLevel) {
+    btnBotManualFill.addEventListener('click', () => {
+      modalSelectBotLevel.classList.add('hidden');
+      switchTab('grid-battle');
+      gridGame.startManualFillMode();
+      showToast('✍️ Custom Manual Fill: Tap or slide across cells to fill 1-25!');
+    });
+  }
+
+  botLevelCards.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const level = btn.dataset.level || 'ai-medium';
+      if (modalSelectBotLevel) modalSelectBotLevel.classList.add('hidden');
+      
+      selectOpponent.value = level;
+      gridGame.init(level);
+      switchTab('grid-battle');
+      sound.playPop();
+
+      const levelNames = { 'ai-easy': 'Easy Bot 🌱', 'ai-medium': 'Medium Bot ⚡', 'ai-hard': 'Hard Bot 🔥' };
+      showToast(`🚀 Match Started vs ${levelNames[level] || 'Bot'}!`);
+    });
+  });
+
   const hubModeCards = document.querySelectorAll('.hub-mode-card');
   hubModeCards.forEach(card => {
     card.addEventListener('click', () => {
       sound.playPop();
       const target = card.dataset.launchTab;
-      if (target) {
+      if (target === 'grid-battle') {
+        if (modalSelectBotLevel) modalSelectBotLevel.classList.remove('hidden');
+      } else if (target) {
         switchTab(target);
       }
     });
@@ -362,6 +461,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const oppAvatar = document.getElementById('opp-avatar');
   const lastCalledNum = document.getElementById('last-called-num');
 
+  const updateBattleHudNames = () => {
+    const p1NameEl = document.querySelector('#hud-player .name');
+    if (multiplayerManager.isConnected && multiplayerManager.players.length > 0) {
+      const hostP = multiplayerManager.players.find(p => p.isHost);
+      const guestP = multiplayerManager.players.find(p => !p.isHost);
+
+      const hostName = hostP ? hostP.name : 'Player 1';
+      const guestName = guestP ? guestP.name : (multiplayerManager.players.length >= 2 ? 'Player 2' : 'Waiting...');
+
+      if (p1NameEl) p1NameEl.textContent = hostName;
+      if (oppName) oppName.textContent = guestName;
+      if (oppAvatar) oppAvatar.textContent = '👥';
+    } else {
+      if (p1NameEl) p1NameEl.textContent = multiplayerManager.myPlayerName || 'Player 1';
+      if (selectOpponent && selectOpponent.value === 'pass-play') {
+        if (oppName) oppName.textContent = 'Player 2';
+        if (oppAvatar) oppAvatar.textContent = '👥';
+      } else {
+        if (oppName) oppName.textContent = 'Bingo Bot';
+        if (oppAvatar) oppAvatar.textContent = '🤖';
+      }
+    }
+  };
+
   const gridGame = new GridBattleGame({
     container: battleGridContainer,
     lettersContainer: lettersContainer,
@@ -369,15 +492,35 @@ document.addEventListener('DOMContentLoaded', () => {
       if (lastCalledNum && lastCalled) {
         lastCalledNum.textContent = lastCalled;
       }
-      if (turn === 1) {
-        p1Status.textContent = viewingPlayer === 1 ? 'Your Turn' : 'P1 Turn';
+      updateBattleHudNames();
+      
+      const hostP = multiplayerManager.players.find(p => p.isHost);
+      const guestP = multiplayerManager.players.find(p => !p.isHost);
+      const hostName = hostP ? hostP.name : 'Player 1';
+      const guestName = guestP ? guestP.name : 'Player 2';
+
+      if (oppType === 'online') {
+        const isMyTurn = (multiplayerManager.isHost && turn === 1) || (!multiplayerManager.isHost && turn === 2);
+        if (isMyTurn) {
+          p1Status.textContent = 'Your Turn';
+          p1Status.style.color = 'var(--accent-cyan)';
+          oppStatus.textContent = 'Waiting';
+          oppStatus.style.color = 'var(--text-muted)';
+        } else {
+          p1Status.textContent = 'Waiting';
+          p1Status.style.color = 'var(--text-muted)';
+          oppStatus.textContent = `${multiplayerManager.isHost ? guestName : hostName}'s Turn`;
+          oppStatus.style.color = 'var(--accent-pink)';
+        }
+      } else if (turn === 1) {
+        p1Status.textContent = viewingPlayer === 1 ? 'Your Turn' : `${hostName}'s Turn`;
         p1Status.style.color = 'var(--accent-cyan)';
         oppStatus.textContent = 'Waiting';
         oppStatus.style.color = 'var(--text-muted)';
       } else {
         p1Status.textContent = 'Waiting';
         p1Status.style.color = 'var(--text-muted)';
-        oppStatus.textContent = oppType.startsWith('ai') ? 'Thinking...' : 'Player 2 Turn';
+        oppStatus.textContent = oppType.startsWith('ai') ? 'Thinking...' : `${guestName}'s Turn`;
         oppStatus.style.color = 'var(--accent-pink)';
       }
     },
@@ -643,10 +786,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modalPlayerCount) modalPlayerCount.textContent = players.length;
     if (modalCapacityBadge) modalCapacityBadge.textContent = capText;
 
-    const playerHtml = players.map((p, idx) => `
+    const hostP = players.find(p => p.isHost);
+    const hostName = hostP ? hostP.name : 'Room Leader';
+
+    const playerHtml = players.map((p) => `
       <div class="player-badge-pill ${p.isHost ? 'host' : ''}">
         <span class="p-avatar">${p.isHost ? '👑' : '👤'}</span>
-        <span class="p-name">Player ${idx + 1}: ${p.name} ${p.isHost ? '(Room Leader)' : ''}</span>
+        <span class="p-name">${p.name || 'Player'} ${p.isHost ? '(Room Leader)' : ''}</span>
       </div>
     `).join('');
 
@@ -686,7 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hostRoomControls) hostRoomControls.classList.add('hidden');
         if (modalHostActions) modalHostActions.classList.add('hidden');
         if (modalGuestWaiting) {
-          modalGuestWaiting.innerHTML = '<span class="pulse-icon">⏳</span> Waiting for Room Leader (Player 1) to start the match...';
+          modalGuestWaiting.innerHTML = `<span class="pulse-icon">⏳</span> Waiting for ${hostName} to start the match...`;
           modalGuestWaiting.classList.remove('hidden');
         }
       }
@@ -725,10 +871,106 @@ document.addEventListener('DOMContentLoaded', () => {
         const isMyStartTurn = multiplayerManager.socket && (data.currentTurnSocketId === multiplayerManager.socket.id);
         showToast(isMyStartTurn ? '🚀 Game Started! Your turn first!' : '🚀 Game Started! Room Leader goes first!');
       }
+    } else if (data.type === 'PLAYER_READY') {
+      const isMe = multiplayerManager.socket && (data.senderSocketId === multiplayerManager.socket.id);
+      if (!isMe) {
+        gridGame.setOpponentReady(data.isReady);
+        showToast(`✅ ${data.senderName || 'Opponent'} is READY ✓`, 2500);
+      }
+    } else if (data.type === 'ALL_PLAYERS_READY') {
+      showToast('⚡ Both players are READY ✓! Starting match!', 3000);
+      if (gridGame.isSetupPhase) {
+        gridGame.finishGridSetupPhase();
+      }
+    } else if (data.type === 'REMATCH_REQUESTED') {
+      const isMe = multiplayerManager.socket && (data.requesterSocketId === multiplayerManager.socket.id);
+      if (!isMe) {
+        const modalRematch = document.getElementById('modal-rematch-request');
+        const titleEl = document.getElementById('rematch-request-title');
+        const descEl = document.getElementById('rematch-request-desc');
+        if (titleEl) titleEl.textContent = `🔄 Rematch Requested!`;
+        if (descEl) descEl.textContent = `${data.requesterName} wants to play again!`;
+        if (modalRematch) modalRematch.classList.remove('hidden');
+        sound.playPop();
+      }
+    } else if (data.type === 'REMATCH_ACCEPTED') {
+      const modalRematch = document.getElementById('modal-rematch-request');
+      if (modalRematch) modalRematch.classList.add('hidden');
+      if (modalVictory) modalVictory.classList.add('hidden');
+
+      if (btnVictoryReplay) {
+        btnVictoryReplay.disabled = false;
+        btnVictoryReplay.innerHTML = '<i data-lucide="rotate-ccw"></i> Play Again';
+      }
+
+      showToast(`🎉 Rematch Accepted! Starting new game...`, 3000);
+      if (multiplayerManager.selectedMode === 'katam-kutta') {
+        switchTab('katam-kutta');
+        const hostName = multiplayerManager.room?.players[0]?.name || 'Player 1';
+        const guestName = multiplayerManager.room?.players[1]?.name || 'Player 2';
+        kkGame.init({
+          gameMode: 'human',
+          roundId: data.newRoundId,
+          p1Name: hostName,
+          p2Name: guestName
+        });
+      } else {
+        switchTab('grid-battle');
+        selectOpponent.value = 'pass-play';
+        gridGame.init('online');
+        gridGame.resetForNewRound(data.newRoundId);
+      }
+    } else if (data.type === 'MODE_CHANGED') {
+      multiplayerManager.selectedMode = data.selectedMode;
+      const modeBadge = document.getElementById('selected-room-mode-badge');
+      if (modeBadge) {
+        modeBadge.textContent = data.selectedMode === 'katam-kutta' ? '❌⭕ Katam-Kutta (2 Players Max)' : (data.selectedMode === 'grid-battle' ? '⚔️ 5x5 Battle (2 Players Max)' : '🎉 75-Ball Party (5 Players Max)');
+      }
+      showToast(`🎮 Room Game Mode changed to: ${data.selectedMode === 'katam-kutta' ? 'Katam-Kutta (Tic Tac Toe)' : data.selectedMode}`);
+    } else if (data.type === 'KK_MOVE') {
+      if (data.roundId === kkGame.roundId) {
+        kkGame.makeMove(data.index, data.symbol);
+      }
+    } else if (data.type === 'KK_VICTORY') {
+      kkGame.isGameOver = true;
+      showVictoryModal({
+        winner: data.winnerName,
+        gameType: 'Katam-Kutta (Tic-Tac-Toe)',
+        opponentType: 'multiplayer',
+        isLossForMe: data.winnerName !== (multiplayerManager.myPlayerName)
+      });
+    } else if (data.type === 'REMATCH_DECLINED') {
+      const modalRematch = document.getElementById('modal-rematch-request');
+      if (modalRematch) modalRematch.classList.add('hidden');
+
+      if (btnVictoryReplay) {
+        btnVictoryReplay.disabled = false;
+        btnVictoryReplay.innerHTML = '<i data-lucide="rotate-ccw"></i> Play Again';
+      }
+      showToast(`❌ ${data.declinerName || 'Opponent'} declined the rematch.`, 4000);
     } else if (data.type === 'GRID_CALL_NUMBER') {
       gridGame.processNumberCall(data.number, true, data.nextTurnSocketId);
       const isMyNextTurn = multiplayerManager.socket && (data.nextTurnSocketId === multiplayerManager.socket.id);
       showToast(isMyNextTurn ? `🎯 Number ${data.number} Called! Your Turn!` : `🎯 Number ${data.number} Called! Opponent's Turn...`);
+    } else if (data.type === 'GRID_VICTORY') {
+      const isMe = multiplayerManager.socket && (data.winnerSocketId === multiplayerManager.socket.id);
+      if (!isMe) {
+        gridGame.handleRemoteVictory(data);
+        showToast(`❌ BINGO! ${data.winnerName || 'Opponent'} completed 5 lines! Aapka Bingo nahi hua!`, 5000);
+      } else {
+        gridGame.isGameOver = true;
+        gridGame.isTurnPending = false;
+        gridGame.renderBoard();
+        showVictoryModal({
+          winner: data.winnerName || multiplayerManager.myPlayerName || 'You',
+          gameType: '5x5 Grid Battle',
+          p1Lines: data.p1Lines !== undefined ? data.p1Lines : gridGame.p1LinesCount,
+          p2Lines: data.p2Lines !== undefined ? data.p2Lines : gridGame.p2LinesCount,
+          totalCalls: data.totalCalls || gridGame.calledNumbers.size,
+          opponentType: gridGame.opponentType,
+          isLossForMe: false
+        });
+      }
     } else if (data.type === 'C75_BALL_DRAWN') {
       if (!caller75.drawnSet.has(data.number)) {
         caller75.drawnSet.add(data.number);
@@ -752,15 +994,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     } else if (data.type === 'C75_VICTORY') {
-      sound.playVictoryFanfare();
+      const isMe = multiplayerManager.socket && (data.winnerSocketId === multiplayerManager.socket.id);
       caller75.stopAutoCall();
-      showVictoryModal({
-        winner: data.winnerName || 'Online Player',
-        gameType: `75-Ball Party (${data.pattern || 'Bingo'})`,
-        callsCount: data.callsCount || caller75.drawnBalls.length,
-        winningCard: 'Room Winner'
-      });
-      showToast(`🏆 ${data.winnerName || 'Player'} WON BINGO! 🎉`, 5000);
+      if (!isMe) {
+        showVictoryModal({
+          winner: data.winnerName || 'Online Player',
+          gameType: `75-Ball Party (${data.pattern || 'Bingo'})`,
+          callsCount: data.callsCount || caller75.drawnBalls.length,
+          winningCard: 'Room Winner',
+          isLossForMe: true
+        });
+        showToast(`❌ ${data.winnerName || 'Player'} WON BINGO! Aapka Bingo nahi hua!`, 5000);
+      } else {
+        showVictoryModal({
+          winner: data.winnerName || 'Online Player',
+          gameType: `75-Ball Party (${data.pattern || 'Bingo'})`,
+          callsCount: data.callsCount || caller75.drawnBalls.length,
+          winningCard: 'Room Winner',
+          isLossForMe: false
+        });
+      }
     } else if (data.type === 'SWITCH_TAB') {
       if (modalRoomLobby) modalRoomLobby.classList.add('hidden');
       if (data.tab === 'grid-battle') {
@@ -770,6 +1023,24 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   };
+
+  const btnRematchAccept = document.getElementById('btn-rematch-accept');
+  const btnRematchDecline = document.getElementById('btn-rematch-decline');
+  const modalRematchRequest = document.getElementById('modal-rematch-request');
+
+  if (btnRematchAccept) {
+    btnRematchAccept.addEventListener('click', () => {
+      if (modalRematchRequest) modalRematchRequest.classList.add('hidden');
+      multiplayerManager.respondRematch(true);
+    });
+  }
+
+  if (btnRematchDecline) {
+    btnRematchDecline.addEventListener('click', () => {
+      if (modalRematchRequest) modalRematchRequest.classList.add('hidden');
+      multiplayerManager.respondRematch(false);
+    });
+  }
 
   if (btnCreateRoom) {
     btnCreateRoom.addEventListener('click', () => {
@@ -908,6 +1179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         multiplayerManager.broadcast({
           type: 'C75_VICTORY',
           winnerName: multiplayerManager.myPlayerName,
+          winnerSocketId: multiplayerManager.socket?.id,
           pattern: caller75.patternType,
           callsCount: caller75.drawnBalls.length
         });
@@ -1003,5 +1275,170 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-print-custom').addEventListener('click', () => {
     window.print();
+  });
+
+  // ==========================================
+  // 5. KATAM KUTTA (MODERN TIC TAC TOE) UI & EVENT CONTROLLER
+  // ==========================================
+  const kkCells = document.querySelectorAll('.kk-cell');
+  const kkTurnIndicator = document.getElementById('kk-turn-indicator');
+  const kkBotThinkingBadge = document.getElementById('kk-bot-thinking-badge');
+  const kkNameX = document.getElementById('kk-name-x');
+  const kkNameO = document.getElementById('kk-name-o');
+  const kkAvatarX = document.getElementById('kk-avatar-x');
+  const kkAvatarO = document.getElementById('kk-avatar-o');
+  const kkDotsX = document.getElementById('kk-dots-x');
+  const kkDotsO = document.getElementById('kk-dots-o');
+  const kkPlayerCardX = document.getElementById('kk-player-x');
+  const kkPlayerCardO = document.getElementById('kk-player-o');
+  const diffBtns = document.querySelectorAll('.diff-btn');
+
+  // How to Play Rules Modal
+  const btnKkHelp = document.getElementById('btn-kk-help');
+  const modalKkHelp = document.getElementById('modal-kk-help');
+  const btnCloseKkHelp = document.getElementById('btn-close-kk-help');
+
+  if (btnKkHelp && modalKkHelp) {
+    btnKkHelp.addEventListener('click', () => modalKkHelp.classList.remove('hidden'));
+  }
+  if (btnCloseKkHelp && modalKkHelp) {
+    btnCloseKkHelp.addEventListener('click', () => modalKkHelp.classList.add('hidden'));
+  }
+
+  // State change renderer for Katam Kutta
+  kkGame.onStateChangeCallback = (state) => {
+    if (kkNameX) kkNameX.textContent = state.playerNames.X || 'Player 1';
+    if (kkNameO) kkNameO.textContent = state.playerNames.O || 'Player 2';
+
+    if (authManager.currentUser) {
+      if (kkAvatarX) kkAvatarX.textContent = state.playerNames.X === (authManager.currentUser.displayName || authManager.currentUser.username) ? (authManager.currentUser.avatar || '👤') : '👤';
+      if (kkAvatarO) kkAvatarO.textContent = state.playerNames.O === (authManager.currentUser.displayName || authManager.currentUser.username) ? (authManager.currentUser.avatar || '👤') : (kkGame.gameMode === 'bot' ? '🤖' : '👤');
+    }
+
+    // Update Turn Indicator & Player Card Highlights
+    if (kkTurnIndicator) {
+      const activeName = state.playerNames[state.currentTurnSymbol] || state.currentTurnSymbol;
+      kkTurnIndicator.textContent = state.isGameOver ? '🎉 Game Finished!' : `${activeName}'s Turn (${state.currentTurnSymbol})`;
+    }
+
+    if (kkPlayerCardX) kkPlayerCardX.classList.toggle('active', state.currentTurnSymbol === 'X' && !state.isGameOver);
+    if (kkPlayerCardO) kkPlayerCardO.classList.toggle('active', state.currentTurnSymbol === 'O' && !state.isGameOver);
+
+    if (kkBotThinkingBadge) {
+      kkBotThinkingBadge.classList.toggle('hidden', !state.isBotThinking);
+    }
+
+    // Update Active Piece Dots (3 dots per player)
+    if (kkDotsX) {
+      const dots = kkDotsX.querySelectorAll('.dot');
+      dots.forEach((dot, idx) => {
+        dot.classList.toggle('active', idx < state.activeXCount);
+      });
+    }
+
+    if (kkDotsO) {
+      const dots = kkDotsO.querySelectorAll('.dot');
+      dots.forEach((dot, idx) => {
+        dot.classList.toggle('active', idx < state.activeOCount);
+      });
+    }
+
+    // Render Board Grid Cells
+    kkCells.forEach((cell, idx) => {
+      const val = state.board[idx];
+      cell.classList.remove('symbol-x', 'symbol-o', 'occupied', 'oldest-warning', 'disappearing');
+
+      if (val === 'X') {
+        cell.textContent = '❌';
+        cell.classList.add('symbol-x', 'occupied');
+      } else if (val === 'O') {
+        cell.textContent = '⭕';
+        cell.classList.add('symbol-o', 'occupied');
+      } else {
+        cell.textContent = '';
+      }
+
+      // Check if cell is oldest warning piece (will vanish next)
+      if (state.currentTurnSymbol === 'X' && state.activeXCount >= 3 && idx === state.oldestXIndex) {
+        cell.classList.add('oldest-warning');
+      } else if (state.currentTurnSymbol === 'O' && state.activeOCount >= 3 && idx === state.oldestOIndex) {
+        cell.classList.add('oldest-warning');
+      }
+
+      // Trigger disappearing animation
+      if (state.disappearingIndex === idx) {
+        cell.classList.add('disappearing');
+      }
+
+      // Highlight winning line cells
+      if (state.winResult && state.winResult.line && state.winResult.line.includes(idx)) {
+        cell.classList.add('winning-cell');
+      }
+    });
+  };
+
+  // Victory callback
+  kkGame.onVictoryCallback = ({ winnerSymbol, winnerName, loserName, winningLine }) => {
+    lastVictoryGameType = 'Katam-Kutta (Tic-Tac-Toe)';
+    const isMeWinner = (multiplayerManager.isConnected && multiplayerManager.myPlayerName === winnerName) || (!multiplayerManager.isConnected && winnerSymbol === 'X');
+
+    setTimeout(() => {
+      showVictoryModal({
+        winner: winnerName,
+        gameType: 'Katam-Kutta (Tic-Tac-Toe)',
+        opponentType: kkGame.gameMode === 'bot' ? 'ai-medium' : 'multiplayer',
+        isLossForMe: !isMeWinner
+      });
+    }, 800);
+  };
+
+  // Cell Click Event
+  kkCells.forEach((cell, idx) => {
+    cell.addEventListener('click', () => {
+      if (kkGame.isGameOver || kkGame.isBotThinking) return;
+
+      if (multiplayerManager.isConnected) {
+        // Multiplayer turn check
+        const mySymbol = multiplayerManager.isHost ? 'X' : 'O';
+        if (kkGame.currentTurnSymbol !== mySymbol) {
+          showToast(`⏳ It's ${kkGame.playerNames[kkGame.currentTurnSymbol]}'s turn! Please wait.`);
+          return;
+        }
+
+        const success = kkGame.makeMove(idx, mySymbol);
+        if (success) {
+          multiplayerManager.broadcast({
+            type: 'KK_MOVE',
+            index: idx,
+            symbol: mySymbol,
+            roundId: kkGame.roundId
+          });
+        }
+      } else {
+        // Single player vs Bot
+        kkGame.makeMove(idx, kkGame.currentTurnSymbol);
+      }
+    });
+  });
+
+  // Bot Difficulty Switcher
+  diffBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      diffBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const diff = btn.dataset.diff || 'medium';
+      kkGame.botDifficulty = diff;
+
+      if (!multiplayerManager.isConnected) {
+        const p1 = authManager.isLoggedIn() ? (authManager.currentUser.displayName || authManager.currentUser.username) : 'Player 1';
+        kkGame.init({
+          gameMode: 'bot',
+          botDifficulty: diff,
+          p1Name: p1,
+          p2Name: 'Bingo Bot 🤖'
+        });
+      }
+      showToast(`🤖 Bot difficulty set to ${diff.toUpperCase()}! Match restarted.`);
+    });
   });
 });

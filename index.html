@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>BINGO Master - Ultimate Mobile Bingo Experience</title>
   <meta name="description" content="Experience the ultimate mobile Bingo game with 5x5 Grid Battle, 75-Ball Caller, 90-Ball Housie, custom word cards, voice calling, and neon visual effects.">
+  <meta name="theme-color" content="#6366f1">
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- Service Worker Registration for PWA & PWABuilder -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW Reg error', err));
+      });
+    }
+  </script>
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">

@@ -1,0 +1,18 @@
+{
+  "name": "Bingo Master Mobile",
+  "short_name": "BingoMaster",
+  "description": "Live Multiplayer 5x5 Bingo, 75-Ball Party, and Katam-Kutta Tic Tac Toe App",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0e15",
+  "theme_color": "#6366f1",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/katam_kutta_3d_banner.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

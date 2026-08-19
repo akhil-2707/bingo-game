@@ -81,25 +81,35 @@ export class GridBattleGame {
       clearInterval(this.setupTimerInterval);
       this.setupTimerInterval = null;
     }
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
 
     this.isSetupPhase = true;
     this.isGridLockedByPlayer = false;
     this.isMyReady = false;
     this.isOpponentReady = false;
+    this.isCountingDown = false;
     this.setupSecondsRemaining = seconds;
 
     const setupBar = document.getElementById('grid-setup-phase-bar');
     const timerDisplay = document.getElementById('setup-countdown-timer');
     const btnReady = document.getElementById('btn-setup-ready');
+    const btnShuffle = document.getElementById('btn-setup-shuffle');
+    const btnManual = document.getElementById('btn-setup-manual');
     const oppReadyBadge = document.getElementById('opp-ready-badge');
 
     if (setupBar) setupBar.classList.remove('hidden');
     if (timerDisplay) timerDisplay.textContent = `${this.setupSecondsRemaining}s`;
+    
     if (btnReady) {
-      btnReady.innerHTML = '✅ Lock Grid';
+      btnReady.innerHTML = '🎯 READY';
       btnReady.disabled = false;
       btnReady.classList.add('pulse-glow');
     }
+    if (btnShuffle) btnShuffle.disabled = false;
+    if (btnManual) btnManual.disabled = false;
 
     if (oppReadyBadge) {
       if (this.opponentType === 'online' || multiplayerManager.isConnected) {
@@ -122,19 +132,42 @@ export class GridBattleGame {
       }
 
       if (this.setupSecondsRemaining <= 0) {
-        this.finishGridSetupPhase();
+        if (this.setupTimerInterval) {
+          clearInterval(this.setupTimerInterval);
+          this.setupTimerInterval = null;
+        }
+        if (this.opponentType !== 'online' && !multiplayerManager.isConnected) {
+          this.finishGridSetupPhase();
+        } else if (!this.isMyReady) {
+          // Auto-ready on timeout if waiting timer expires
+          this.lockGridEarly();
+        }
       }
     }, 1000);
   }
 
   lockGridEarly() {
+    if (this.isMyReady) return; // Prevent multi-clicks
     this.isGridLockedByPlayer = true;
     this.isMyReady = true;
+
     const btnReady = document.getElementById('btn-setup-ready');
+    const btnShuffle = document.getElementById('btn-setup-shuffle');
+    const btnManual = document.getElementById('btn-setup-manual');
+    const oppReadyBadge = document.getElementById('opp-ready-badge');
+
     if (btnReady) {
-      btnReady.innerHTML = '✅ Ready! (Waiting...)';
+      btnReady.innerHTML = 'READY ✓';
       btnReady.disabled = true;
       btnReady.classList.remove('pulse-glow');
+    }
+    if (btnShuffle) btnShuffle.disabled = true;
+    if (btnManual) btnManual.disabled = true;
+
+    if (oppReadyBadge && !this.isOpponentReady) {
+      oppReadyBadge.textContent = 'Waiting for opponent...';
+      oppReadyBadge.style.color = 'var(--ios-amber)';
+      oppReadyBadge.classList.remove('hidden');
     }
 
     if (this.opponentType === 'online' || multiplayerManager.isConnected) {
@@ -155,7 +188,7 @@ export class GridBattleGame {
     this.isOpponentReady = isReady;
     const oppReadyBadge = document.getElementById('opp-ready-badge');
     if (oppReadyBadge) {
-      oppReadyBadge.textContent = isReady ? 'Opponent: ✅ READY!' : 'Opponent: ⏳ Setting Up...';
+      oppReadyBadge.textContent = isReady ? '🎯 Opponent is READY!' : 'Opponent: ⏳ Setting Up...';
       oppReadyBadge.style.color = isReady ? 'var(--accent-cyan)' : 'var(--text-muted)';
       oppReadyBadge.classList.remove('hidden');
     }
@@ -171,14 +204,67 @@ export class GridBattleGame {
       }
       return;
     }
+  }
 
-    if (this.isMyReady && this.isOpponentReady) {
-      if (this.setupTimerInterval) {
-        clearInterval(this.setupTimerInterval);
-        this.setupTimerInterval = null;
-      }
-      this.finishGridSetupPhase();
+  startSynchronizedCountdown(startAt) {
+    if (this.isCountingDown) return;
+    this.isCountingDown = true;
+    
+    if (this.setupTimerInterval) {
+      clearInterval(this.setupTimerInterval);
+      this.setupTimerInterval = null;
     }
+
+    const timerDisplay = document.getElementById('setup-countdown-timer');
+    const oppReadyBadge = document.getElementById('opp-ready-badge');
+    const btnReady = document.getElementById('btn-setup-ready');
+    const btnShuffle = document.getElementById('btn-setup-shuffle');
+    const btnManual = document.getElementById('btn-setup-manual');
+
+    if (btnReady) btnReady.disabled = true;
+    if (btnShuffle) btnShuffle.disabled = true;
+    if (btnManual) btnManual.disabled = true;
+
+    if (oppReadyBadge) {
+      oppReadyBadge.textContent = 'Both players are ready!';
+      oppReadyBadge.style.color = 'var(--ios-mint)';
+    }
+
+    let lastSec = -1;
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      const remainingMs = Math.max(0, startAt - now);
+      const remainingSec = Math.ceil(remainingMs / 1000);
+
+      if (remainingSec !== lastSec) {
+        lastSec = remainingSec;
+        if (timerDisplay) {
+          timerDisplay.textContent = remainingSec > 0 ? `${remainingSec}` : 'GO!';
+          timerDisplay.style.color = 'var(--ios-mint)';
+        }
+        if (remainingSec > 0) {
+          sound.playPop();
+        } else {
+          sound.playLineChime();
+        }
+      }
+
+      if (remainingMs <= 0) {
+        if (this.countdownInterval) {
+          clearInterval(this.countdownInterval);
+          this.countdownInterval = null;
+        }
+        this.isCountingDown = false;
+        if (multiplayerManager.isConnected) {
+          multiplayerManager.broadcast({ type: 'GAME_ENTER_PLAYING' });
+        }
+        this.finishGridSetupPhase();
+      }
+    };
+
+    updateCountdown();
+    this.countdownInterval = setInterval(updateCountdown, 100);
   }
 
   handleRemoteVictory(data) {
@@ -190,6 +276,10 @@ export class GridBattleGame {
     if (this.setupTimerInterval) {
       clearInterval(this.setupTimerInterval);
       this.setupTimerInterval = null;
+    }
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
     }
 
     const setupBar = document.getElementById('grid-setup-phase-bar');
@@ -216,6 +306,10 @@ export class GridBattleGame {
       clearInterval(this.setupTimerInterval);
       this.setupTimerInterval = null;
     }
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
 
     this.currentRoundId = newRoundId || 'round_1';
     this.currentTurn = 1;
@@ -231,6 +325,7 @@ export class GridBattleGame {
     this.isGridLockedByPlayer = false;
     this.isMyReady = false;
     this.isOpponentReady = false;
+    this.isCountingDown = false;
 
     this.powerupUses = { magic: 1, freeze: 1, bomb: 1 };
     this.isFrozen = false;
@@ -247,6 +342,10 @@ export class GridBattleGame {
     if (this.setupTimerInterval) {
       clearInterval(this.setupTimerInterval);
       this.setupTimerInterval = null;
+    }
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
     }
 
     this.isSetupPhase = false;

@@ -874,13 +874,17 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (data.type === 'PLAYER_READY') {
       const isMe = multiplayerManager.socket && (data.senderSocketId === multiplayerManager.socket.id);
       if (!isMe) {
-        gridGame.setOpponentReady(data.isReady);
-        showToast(`✅ ${data.senderName || 'Opponent'} is READY ✓`, 2500);
+        gridGame.setOpponentReady(true);
+        showToast(`🎯 ${data.senderName || 'Opponent'} is READY!`, 2500);
+      }
+    } else if (data.type === 'START_COUNTDOWN') {
+      showToast('Both players are ready!', 3000);
+      if (gridGame.isSetupPhase || gridGame.isMyReady) {
+        gridGame.startSynchronizedCountdown(data.startAt);
       }
     } else if (data.type === 'ALL_PLAYERS_READY') {
-      showToast('⚡ Both players are READY ✓! Starting match!', 3000);
-      if (gridGame.isSetupPhase) {
-        gridGame.finishGridSetupPhase();
+      if (gridGame.isSetupPhase && data.startAt) {
+        gridGame.startSynchronizedCountdown(data.startAt);
       }
     } else if (data.type === 'REMATCH_REQUESTED') {
       const isMe = multiplayerManager.socket && (data.requesterSocketId === multiplayerManager.socket.id);

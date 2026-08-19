@@ -974,19 +974,33 @@ io.on('connection', (socket) => {
     const codeNum = Math.floor(1000 + Math.random() * 9000);
     const roomCode = `BINGO-${codeNum}`;
     const cleanHostName = (hostName || 'Player 1').trim();
-    const hostPlayer = { socketId: socket.id, name: cleanHostName, isHost: true };
+    const hostPlayer = {
+      id: socket.id,
+      socketId: socket.id,
+      name: cleanHostName,
+      isHost: true,
+      ready: false,
+      connected: true,
+      board: []
+    };
     const roomData = {
       roomCode,
+      roomId: roomCode,
       hostName: cleanHostName,
       selectedMode: selectedMode || 'grid-battle',
       players: [hostPlayer],
       currentTurnSocketId: socket.id,
       calledNumbers: [],
-      status: 'waiting',
+      status: 'WAITING',
+      gameStarted: false,
+      winner: null,
+      startAt: null,
       roundNumber: 1,
       roundId: 'round_1',
-      readyPlayers: new Set(),
-      rematchState: { requestedBy: null, status: 'none' }
+      rematch: {
+        player1: false,
+        player2: false
+      }
     };
 
     if (isDbConnected && mongoose.connection.readyState === 1) {
@@ -1034,13 +1048,23 @@ io.on('connection', (socket) => {
     if (existingIndex !== -1) {
       // Reconnecting existing player
       room.players[existingIndex].socketId = socket.id;
+      room.players[existingIndex].id = socket.id;
       room.players[existingIndex].name = cleanPlayerName;
+      room.players[existingIndex].connected = true;
     } else {
       if (room.players.length >= maxPlayers) {
         socket.emit('error_msg', `Room "${cleanCode}" is full! (${room.players.length}/${maxPlayers} players max)`);
         return;
       }
-      const newPlayer = { socketId: socket.id, name: cleanPlayerName, isHost: false };
+      const newPlayer = {
+        id: socket.id,
+        socketId: socket.id,
+        name: cleanPlayerName,
+        isHost: false,
+        ready: false,
+        connected: true,
+        board: []
+      };
       room.players.push(newPlayer);
     }
     
@@ -1052,7 +1076,7 @@ io.on('connection', (socket) => {
     console.log(`👤 ${cleanPlayerName} joined Room Key ${cleanCode}`);
   });
 
-  // Relay Game Actions with Strict Turn Validation
+  // Relay Game Actions with Strict Turn Validation and Synchronized READY
   socket.on('game_action', ({ roomCode, action }) => {
     const room = memoryRooms.get(roomCode);
     if (!room) {
@@ -1073,88 +1097,166 @@ io.on('connection', (socket) => {
     }
 
     if (action.type === 'START_GAME') {
-      room.status = 'playing';
+      room.status = 'PLAYING';
+      room.gameStarted = true;
       room.calledNumbers = [];
-      room.readyPlayers = new Set();
       room.currentTurnSocketId = room.players[0].socketId; // Host starts turn 1
       action.currentTurnSocketId = room.currentTurnSocketId;
       action.roundId = room.roundId || 'round_1';
       action.players = room.players;
+      action.room = room;
       io.to(roomCode).emit('game_action_received', action);
       console.log(`🚀 Match started in Room ${roomCode} (${room.roundId}). Turn: ${room.currentTurnSocketId}`);
       return;
     }
 
     if (action.type === 'PLAYER_READY') {
-      if (!room.readyPlayers) room.readyPlayers = new Set();
-      if (action.isReady) {
-        room.readyPlayers.add(socket.id);
-      } else {
-        room.readyPlayers.delete(socket.id);
+      const p = room.players.find(player => player.socketId === socket.id);
+      if (p) {
+        p.ready = true;
       }
-      action.senderSocketId = socket.id;
-      const senderPlayer = room.players.find(p => p.socketId === socket.id);
-      action.senderName = senderPlayer ? senderPlayer.name : 'Player';
-      action.readyCount = room.readyPlayers.size;
-      action.totalPlayers = room.players.length;
-      action.roundId = room.roundId || 'round_1';
-      io.to(roomCode).emit('game_action_received', action);
 
-      if (room.players.length >= 2 && room.readyPlayers.size >= room.players.length) {
-        io.to(roomCode).emit('game_action_received', { type: 'ALL_PLAYERS_READY', roundId: room.roundId });
-        console.log(`⚡ All players ready in Room ${roomCode}! (${room.roundId})`);
+      const p1 = room.players[0];
+      const p2 = room.players[1];
+      const bothReady = room.players.length >= 2 && p1 && p1.ready && p2 && p2.ready;
+
+      if (bothReady) {
+        if (room.status !== 'STARTING' && room.status !== 'PLAYING') {
+          room.status = 'STARTING';
+          room.startAt = Date.now() + 3000;
+          room.currentTurnSocketId = room.players[0].socketId;
+
+          io.to(roomCode).emit('game_action_received', {
+            type: 'START_COUNTDOWN',
+            status: 'STARTING',
+            startAt: room.startAt,
+            currentTurnSocketId: room.currentTurnSocketId,
+            roundId: room.roundId || 'round_1',
+            players: room.players,
+            room
+          });
+          console.log(`⚡ Synchronized Countdown started in Room ${roomCode}! StartAt: ${room.startAt}`);
+        }
+      } else {
+        room.status = 'READY';
+        io.to(roomCode).emit('game_action_received', {
+          type: 'PLAYER_READY',
+          senderSocketId: socket.id,
+          senderName: p ? p.name : 'Player',
+          status: 'READY',
+          readyCount: room.players.filter(pl => pl.ready).length,
+          totalPlayers: room.players.length,
+          roundId: room.roundId || 'round_1',
+          players: room.players,
+          room
+        });
+        console.log(`👍 Player ${p ? p.name : socket.id} is READY in Room ${roomCode}`);
+      }
+      return;
+    }
+
+    if (action.type === 'GAME_ENTER_PLAYING') {
+      if (room.status === 'STARTING') {
+        room.status = 'PLAYING';
+        room.gameStarted = true;
+        console.log(`🎮 Room ${roomCode} transitioned to PLAYING state.`);
       }
       return;
     }
 
     if (action.type === 'GRID_VICTORY') {
-      room.status = 'finished';
+      room.status = 'FINISHED';
       action.winnerSocketId = action.winnerSocketId || socket.id;
       const winnerPlayer = room.players.find(p => p.socketId === action.winnerSocketId);
       const loserPlayer = room.players.find(p => p.socketId !== action.winnerSocketId);
       action.winnerName = action.winnerName || (winnerPlayer ? winnerPlayer.name : 'Player');
       action.loserName = loserPlayer ? loserPlayer.name : 'Opponent';
+      room.winner = action.winnerName;
       action.roundId = room.roundId || 'round_1';
+      action.room = room;
       io.to(roomCode).emit('game_action_received', action);
       console.log(`🏆 Match finished in Room ${roomCode}. Winner: ${action.winnerName} (${action.roundId})`);
       return;
     }
 
     if (action.type === 'REMATCH_REQUEST') {
-      const requester = room.players.find(p => p.socketId === socket.id);
+      const requesterIndex = room.players.findIndex(p => p.socketId === socket.id);
+      if (requesterIndex === 0) {
+        room.rematch.player1 = true;
+      } else if (requesterIndex === 1) {
+        room.rematch.player2 = true;
+      } else {
+        room.rematch.player1 = true;
+      }
+
+      const requester = room.players[requesterIndex] || room.players[0];
       const requesterName = requester ? requester.name : 'Opponent';
-      room.rematchState = { requestedBy: socket.id, requesterName, status: 'pending' };
-      
-      io.to(roomCode).emit('game_action_received', {
-        type: 'REMATCH_REQUESTED',
-        requesterSocketId: socket.id,
-        requesterName,
-        roundId: room.roundId
-      });
-      console.log(`🔄 Rematch requested in Room ${roomCode} by ${requesterName}`);
+      room.status = 'REMATCH_WAITING';
+
+      if (room.players.length >= 2 && room.rematch.player1 && room.rematch.player2) {
+        // Both players agreed -> RESET ROOM STATE!
+        room.roundNumber = (room.roundNumber || 1) + 1;
+        room.roundId = `round_${room.roundNumber}`;
+        room.status = 'WAITING';
+        room.gameStarted = false;
+        room.winner = null;
+        room.calledNumbers = [];
+        room.startAt = null;
+        room.rematch = { player1: false, player2: false };
+        room.players.forEach(p => { p.ready = false; });
+        room.currentTurnSocketId = room.players[0].socketId;
+
+        io.to(roomCode).emit('game_action_received', {
+          type: 'REMATCH_ACCEPTED',
+          newRoundId: room.roundId,
+          roundNumber: room.roundNumber,
+          players: room.players,
+          room
+        });
+        console.log(`✅ Rematch ACCEPTED by both players in Room ${roomCode}. New Round: ${room.roundId}`);
+      } else {
+        io.to(roomCode).emit('game_action_received', {
+          type: 'REMATCH_REQUESTED',
+          requesterSocketId: socket.id,
+          requesterName,
+          rematch: room.rematch,
+          roundId: room.roundId,
+          room
+        });
+        console.log(`🔄 Rematch requested in Room ${roomCode} by ${requesterName}`);
+      }
       return;
     }
 
     if (action.type === 'REMATCH_RESPONSE') {
       if (action.accepted) {
+        const responderIndex = room.players.findIndex(p => p.socketId === socket.id);
+        if (responderIndex === 0) room.rematch.player1 = true;
+        else if (responderIndex === 1) room.rematch.player2 = true;
+
         room.roundNumber = (room.roundNumber || 1) + 1;
         room.roundId = `round_${room.roundNumber}`;
-        room.status = 'waiting_for_ready';
+        room.status = 'WAITING';
+        room.gameStarted = false;
+        room.winner = null;
         room.calledNumbers = [];
-        room.readyPlayers = new Set();
-        room.rematchState = { requestedBy: null, status: 'none' };
+        room.startAt = null;
+        room.rematch = { player1: false, player2: false };
+        room.players.forEach(p => { p.ready = false; });
+        room.currentTurnSocketId = room.players[0].socketId;
         
         io.to(roomCode).emit('game_action_received', {
           type: 'REMATCH_ACCEPTED',
           newRoundId: room.roundId,
           roundNumber: room.roundNumber,
-          players: room.players
+          players: room.players,
+          room
         });
         console.log(`✅ Rematch ACCEPTED in Room ${roomCode}. New Round: ${room.roundId}`);
       } else {
         const decliner = room.players.find(p => p.socketId === socket.id);
         const declinerName = decliner ? decliner.name : 'Opponent';
-        room.rematchState = { requestedBy: null, status: 'declined' };
+        room.rematch = { player1: false, player2: false };
         
         io.to(roomCode).emit('game_action_received', {
           type: 'REMATCH_DECLINED',
@@ -1168,12 +1270,12 @@ io.on('connection', (socket) => {
     }
 
     if (action.type === 'GRID_CALL_NUMBER') {
-      if (room.status !== 'playing') {
+      if (room.status !== 'PLAYING' && room.status !== 'playing') {
         socket.emit('error_msg', 'Game has not started yet or is already finished!');
         return;
       }
 
-      // STRICT TURN VALIDATION: Reject move if requesting socket is not the active turn socket!
+      // STRICT TURN VALIDATION: Reject move if requesting socket is not active turn socket
       if (socket.id !== room.currentTurnSocketId) {
         socket.emit('error_msg', "🚫 Not your turn! Please wait for your opponent's move.");
         console.log(`⚠️ Blocked out-of-turn move attempt by ${socket.id} in Room ${roomCode}`);
@@ -1233,6 +1335,11 @@ io.on('connection', (socket) => {
         } else {
           if (removed.isHost && room.players.length > 0) {
             room.players[0].isHost = true;
+          }
+          if (room.status === 'WAITING' || room.status === 'READY' || room.status === 'STARTING') {
+            room.status = 'WAITING';
+            room.startAt = null;
+            room.players.forEach(p => { p.ready = false; });
           }
           io.to(roomCode).emit('player_joined', { room, playerName: `${removed.name} (left)` });
         }

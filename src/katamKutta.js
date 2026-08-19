@@ -238,6 +238,52 @@ export class KatamKuttaGame {
     return false;
   }
 
+  resetForNewRound(newRoundId) {
+    this.roundId = newRoundId || 'round_1';
+    this.resetBoard();
+  }
+
+  // Authoritative server result application for real-time multiplayer
+  applyServerMovePayload(payload) {
+    if (!payload) return;
+    if (payload.roundId && payload.roundId !== this.roundId) return;
+
+    this.board = payload.board ? [...payload.board] : this.board;
+    this.disappearingIndex = payload.removedMove ? payload.removedMove.cell : null;
+    this.isGameOver = !!payload.winner;
+    this.currentTurnSymbol = payload.turn === 'player1' ? 'X' : 'O';
+
+    if (payload.winner) {
+      this.isGameOver = true;
+      if (this.onVictoryCallback) {
+        this.onVictoryCallback({
+          winnerSymbol: payload.turn === 'player1' ? 'X' : 'O',
+          winnerName: payload.winner,
+          loserName: payload.winner === this.playerNames.X ? this.playerNames.O : this.playerNames.X,
+          winningLine: payload.winningCells
+        });
+      }
+    }
+
+    sound.playPop();
+
+    const p1Active = payload.activeMoves?.player1 || [];
+    const p2Active = payload.activeMoves?.player2 || [];
+
+    const oldestX = p1Active.length >= this.MAX_ACTIVE_PIECES ? p1Active[0].cell : null;
+    const oldestO = p2Active.length >= this.MAX_ACTIVE_PIECES ? p2Active[0].cell : null;
+
+    this.notifyStateChange({
+      lastMoveIndex: payload.addedMove ? payload.addedMove.cell : null,
+      removedIndex: this.disappearingIndex,
+      oldestXIndex: oldestX,
+      oldestOIndex: oldestO,
+      activeXCount: p1Active.length,
+      activeOCount: p2Active.length,
+      winResult: payload.winner ? { winner: payload.winner, line: payload.winningCells } : null
+    });
+  }
+
   notifyStateChange(extraData = {}) {
     if (this.onStateChangeCallback) {
       this.onStateChangeCallback({
@@ -255,3 +301,4 @@ export class KatamKuttaGame {
     }
   }
 }
+

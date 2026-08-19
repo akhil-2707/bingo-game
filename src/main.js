@@ -931,9 +931,21 @@ document.addEventListener('DOMContentLoaded', () => {
         modeBadge.textContent = data.selectedMode === 'katam-kutta' ? '❌⭕ Katam-Kutta (2 Players Max)' : (data.selectedMode === 'grid-battle' ? '⚔️ 5x5 Battle (2 Players Max)' : '🎉 75-Ball Party (5 Players Max)');
       }
       showToast(`🎮 Room Game Mode changed to: ${data.selectedMode === 'katam-kutta' ? 'Katam-Kutta (Tic Tac Toe)' : data.selectedMode}`);
+    } else if (data.type === 'MOVE_APPLIED') {
+      if (data.roundId === kkGame.roundId || !kkGame.roundId) {
+        kkGame.applyServerMovePayload(data);
+        if (data.winner) {
+          showVictoryModal({
+            winner: data.winner,
+            gameType: 'Katam-Kutta (Tic-Tac-Toe)',
+            opponentType: 'multiplayer',
+            isLossForMe: data.winner !== multiplayerManager.myPlayerName
+          });
+        }
+      }
     } else if (data.type === 'KK_MOVE') {
       if (data.roundId === kkGame.roundId) {
-        kkGame.makeMove(data.index, data.symbol);
+        kkGame.makeMove(data.index !== undefined ? data.index : data.cell, data.symbol || 'X');
       }
     } else if (data.type === 'KK_VICTORY') {
       kkGame.isGameOver = true;
@@ -1404,20 +1416,25 @@ document.addEventListener('DOMContentLoaded', () => {
       if (multiplayerManager.isConnected) {
         // Multiplayer turn check
         const mySymbol = multiplayerManager.isHost ? 'X' : 'O';
+        const myPlayerKey = multiplayerManager.isHost ? 'player1' : 'player2';
+
         if (kkGame.currentTurnSymbol !== mySymbol) {
           showToast(`⏳ It's ${kkGame.playerNames[kkGame.currentTurnSymbol]}'s turn! Please wait.`);
           return;
         }
 
-        const success = kkGame.makeMove(idx, mySymbol);
-        if (success) {
-          multiplayerManager.broadcast({
-            type: 'KK_MOVE',
-            index: idx,
-            symbol: mySymbol,
-            roundId: kkGame.roundId
-          });
-        }
+        const moveId = `move_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+
+        multiplayerManager.broadcast({
+          type: 'KK_MOVE',
+          roundId: kkGame.roundId,
+          moveId,
+          playerId: myPlayerKey,
+          cell: idx,
+          index: idx,
+          symbol: mySymbol,
+          timestamp: Date.now()
+        });
       } else {
         // Single player vs Bot
         kkGame.makeMove(idx, kkGame.currentTurnSymbol);

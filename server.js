@@ -1179,6 +1179,152 @@ io.on('connection', (socket) => {
       return;
     }
 
+    if (action.type === 'KK_MOVE') {
+      const p1 = room.players[0];
+      const p2 = room.players[1];
+      const isP1 = p1 && p1.socketId === socket.id;
+      const isP2 = p2 && p2.socketId === socket.id;
+
+      if (!isP1 && !isP2) {
+        socket.emit('error_msg', 'You are not a player in this room!');
+        return;
+      }
+
+      if (room.status !== 'PLAYING' && room.status !== 'playing') {
+        socket.emit('error_msg', 'Game has not started yet or is already finished!');
+        return;
+      }
+
+      if (action.roundId && action.roundId !== room.roundId) {
+        console.log(`⚠️ Stale move rejected! Move roundId (${action.roundId}) != room roundId (${room.roundId})`);
+        return;
+      }
+
+      if (!room.processedMoveIds) room.processedMoveIds = new Set();
+      const moveId = action.moveId || `move_${Date.now()}_${Math.random()}`;
+      if (room.processedMoveIds.has(moveId)) {
+        console.log(`⚠️ Duplicate moveId rejected: ${moveId}`);
+        return;
+      }
+
+      const currentTurnKey = room.turn || 'player1';
+      const playerKey = isP1 ? 'player1' : 'player2';
+
+      if (playerKey !== currentTurnKey) {
+        socket.emit('error_msg', "🚫 Not your turn! Please wait for your opponent's move.");
+        return;
+      }
+
+      const cell = action.cell;
+      if (typeof cell !== 'number' || cell < 0 || cell > 8) {
+        socket.emit('error_msg', 'Invalid cell position!');
+        return;
+      }
+
+      if (!room.board) room.board = Array(9).fill(null);
+      if (room.board[cell] !== null) {
+        socket.emit('error_msg', 'Cell is already occupied!');
+        return;
+      }
+
+      const symbol = isP1 ? 'X' : 'O';
+      const player = isP1 ? p1 : p2;
+
+      if (!player.activeMoves) player.activeMoves = [];
+
+      let removedMove = null;
+      if (player.activeMoves.length >= 3) {
+        removedMove = player.activeMoves.shift();
+        room.board[removedMove.cell] = null;
+      }
+
+      const moveNumber = (room.moveHistory ? room.moveHistory.length : 0) + 1;
+      const addedMove = {
+        roundId: room.roundId || 'round_1',
+        moveId,
+        playerId: playerKey,
+        symbol,
+        cell,
+        moveNumber,
+        timestamp: Date.now()
+      };
+
+      player.activeMoves.push(addedMove);
+      room.board[cell] = symbol;
+
+      if (!room.moveHistory) room.moveHistory = [];
+      room.moveHistory.push(addedMove);
+      room.processedMoveIds.add(moveId);
+
+      const winningLines = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
+      ];
+
+      let winningLine = null;
+      for (const line of winningLines) {
+        const [a, b, c] = line;
+        if (room.board[a] === symbol && room.board[b] === symbol && room.board[c] === symbol) {
+          winningLine = line;
+          break;
+        }
+      }
+
+      if (winningLine) {
+        room.status = 'FINISHED';
+        room.winner = player.name || (isP1 ? 'Player 1' : 'Player 2');
+        room.winningCells = winningLine;
+
+        io.to(roomCode).emit('game_action_received', {
+          type: 'MOVE_APPLIED',
+          roundId: room.roundId,
+          moveId,
+          playerId: playerKey,
+          senderSocketId: socket.id,
+          addedMove,
+          removedMove,
+          activeMoves: {
+            player1: p1 ? p1.activeMoves : [],
+            player2: p2 ? p2.activeMoves : []
+          },
+          board: room.board,
+          turn: room.turn,
+          winner: room.winner,
+          winningCells: room.winningCells,
+          room
+        });
+        console.log(`🏆 Katam-Kutta Match Finished in Room ${roomCode}! Winner: ${room.winner}`);
+        return;
+      }
+
+      room.turn = currentTurnKey === 'player1' ? 'player2' : 'player1';
+      const nextPlayerObj = room.turn === 'player1' ? p1 : p2;
+      room.currentTurnSocketId = nextPlayerObj ? nextPlayerObj.socketId : null;
+
+      io.to(roomCode).emit('game_action_received', {
+        type: 'MOVE_APPLIED',
+        roundId: room.roundId,
+        moveId,
+        playerId: playerKey,
+        senderSocketId: socket.id,
+        addedMove,
+        removedMove,
+        activeMoves: {
+          player1: p1 ? p1.activeMoves : [],
+          player2: p2 ? p2.activeMoves : []
+        },
+        board: room.board,
+        turn: room.turn,
+        nextTurnSocketId: room.currentTurnSocketId,
+        winner: null,
+        winningCells: [],
+        room
+      });
+      console.log(`❌⭕ Katam-Kutta Move ${moveId} (Cell ${cell}, ${symbol}) in Room ${roomCode}. Next Turn: ${room.turn}`);
+      return;
+    }
+
     if (action.type === 'REMATCH_REQUEST') {
       const requesterIndex = room.players.findIndex(p => p.socketId === socket.id);
       if (requesterIndex === 0) {
@@ -1200,10 +1346,15 @@ io.on('connection', (socket) => {
         room.status = 'WAITING';
         room.gameStarted = false;
         room.winner = null;
+        room.winningCells = [];
         room.calledNumbers = [];
+        room.board = Array(9).fill(null);
         room.startAt = null;
+        room.turn = 'player1';
+        room.processedMoveIds = new Set();
+        room.moveHistory = [];
         room.rematch = { player1: false, player2: false };
-        room.players.forEach(p => { p.ready = false; });
+        room.players.forEach(p => { p.ready = false; p.activeMoves = []; });
         room.currentTurnSocketId = room.players[0].socketId;
 
         io.to(roomCode).emit('game_action_received', {
